@@ -147,13 +147,13 @@ export default defineConfig<Config>(
                 // Each site can have its own locale, currency, and detection settings
                 sites: [
                     {
-                        id: 'RefArchGlobal',
-                        defaultLocale: 'en-GB',
-                        defaultCurrency: 'GBP',
+                        id: 'DressUp',
+                        defaultLocale: 'en-US',
+                        defaultCurrency: 'USD',
                         supportedLocales: [
                             {
-                                id: 'en-GB',
-                                preferredCurrency: 'GBP',
+                                id: 'en-US',
+                                preferredCurrency: 'USD',
                             },
                             {
                                 id: 'da-DK',
@@ -236,10 +236,10 @@ export default defineConfig<Config>(
             cookies: { domain: '' },
             // Default site ID configuration
             // See CONFIG-OPTIONS.md#defaultSiteId for detailed documentation
-            defaultSiteId: 'RefArchGlobal',
+            defaultSiteId: 'DressUp',
             siteAliasMap: {
                 RefArch: 'us',
-                RefArchGlobal: 'global',
+                DressUp: 'global',
             },
             // Hybrid mode configuration
             // See CONFIG-OPTIONS.md#hybrid for detailed documentation
