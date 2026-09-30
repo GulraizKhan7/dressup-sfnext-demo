@@ -13,27 +13,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import availabilityData from './product-availability.json';
+import {
+    cityManagement,
+    getDistanceKm,
+    getInventoryEntry,
+    getTransitDays,
+    resolveCityByPostcode,
+    type CityConfig,
+    type InventoryEntry,
+} from '@/lib/delivery-promise';
 import type { CartFulfillment, LocationAvailability, ProductAvailability } from './types';
 
-const products = (availabilityData as unknown as { products: ProductAvailability[] }).products;
-
-/** Index by master id AND by every variant id, so PLP (master) and cart (variant) ids both resolve. */
-const productIndex = new Map<string, ProductAvailability>();
-for (const product of products) {
-    productIndex.set(product.productId, product);
-    for (const variantId of product.variantIds) {
-        productIndex.set(variantId, product);
-    }
+/**
+ * Availability is derived from `data/simplified_city_management.json` (hub stock + city-to-city distance +
+ * lead time bands), so PLP / PDP / cart show the same numbers the delivery promise uses. Distance and lead
+ * time are measured from the shopper's city; without a postcode that is the default city.
+ */
+function toLocation(city: CityConfig, entry: InventoryEntry, shopperCity: CityConfig): LocationAvailability {
+    const stockLevel = entry.stock[city.hub.id] ?? 0;
+    const distance = getDistanceKm(city.id, shopperCity.id);
+    return {
+        fulfillmentLocationId: city.hub.id,
+        city: city.name,
+        postalCode: city.postalCode ?? '',
+        stockLevel,
+        distance,
+        distanceUnit: 'KM',
+        leadTime: stockLevel > 0 ? getTransitDays(distance) + (city.hub.handlingDays ?? 0) : null,
+        leadTimeUnit: 'DAYS',
+    };
 }
 
-export function getProductAvailability(productId: string | null | undefined): ProductAvailability | undefined {
-    return productId ? productIndex.get(productId) : undefined;
+function toProduct(entry: InventoryEntry, postcode?: string | null): ProductAvailability {
+    const shopperCity = resolveCityByPostcode(postcode);
+    return {
+        productId: entry.productId,
+        productName: entry.productName ?? entry.productId,
+        sku: entry.productId,
+        brand: entry.brand,
+        category: entry.category ?? null,
+        variantIds: entry.variantIds ?? [],
+        availability: cityManagement.cities
+            .filter((city) => (entry.stock[city.hub.id] ?? 0) > 0)
+            .map((city) => toLocation(city, entry, shopperCity)),
+    };
+}
+
+export function getProductAvailability(
+    productId: string | null | undefined,
+    postcode?: string | null
+): ProductAvailability | undefined {
+    const entry = getInventoryEntry(productId);
+    return entry ? toProduct(entry, postcode) : undefined;
 }
 
 /** Master product id for a master or variant id; `undefined` when the product has no fulfillment data. */
 export function getMasterProductId(productId: string | null | undefined): string | undefined {
-    return getProductAvailability(productId)?.productId;
+    return getInventoryEntry(productId)?.productId;
 }
 
 export function isLocationInStock(location: LocationAvailability): boolean {

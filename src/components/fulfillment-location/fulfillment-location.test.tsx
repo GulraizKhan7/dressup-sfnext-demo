@@ -25,7 +25,7 @@ import { ProductAvailabilitySummary } from './availability-summary';
 import { LocationSelector } from './location-selector';
 import { FulfillmentGroups } from './fulfillment-groups';
 
-// Two products that exist in product-availability.json (variant ids resolve to the master).
+// Two products that exist in data/simplified_city_management.json (variant ids resolve to the master).
 const PRODUCT_A = 'DU-893268-34';
 const PRODUCT_B = 'DU-893259-36';
 
@@ -44,7 +44,7 @@ describe('ProductAvailabilitySummary (PLP)', () => {
         expect(summary).toHaveTextContent(String(location?.stockLevel));
         expect(summary).toHaveTextContent(location?.postalCode ?? '');
         expect(summary).toHaveTextContent(`${location?.distance} km`);
-        expect(summary).toHaveTextContent(`${location?.leadTime} days`);
+        expect(summary).toHaveTextContent(new RegExp(`${location?.leadTime} days?`));
     });
 
     test('renders nothing for a product without fulfillment data', () => {
