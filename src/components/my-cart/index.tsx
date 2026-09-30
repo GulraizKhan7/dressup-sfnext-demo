@@ -35,6 +35,9 @@ import { formatCurrency } from '@/lib/currency';
 import { findImageGroupBy } from '@/lib/product/image-groups-utils';
 import { createProductUrl, getDisplayVariationValues } from '@/lib/product/product-utils';
 import { toImageUrl } from '@/lib/images/dynamic-image';
+import { CartLineFulfillmentInfo } from '@/components/fulfillment-location/cart-group-title';
+import { useFulfillmentFormat } from '@/components/fulfillment-location/use-fulfillment-format';
+import { useFulfillmentSplit } from '@/components/fulfillment-location/use-fulfillment-split';
 
 /**
  * Props for the MyCart component
@@ -69,9 +72,22 @@ export default function MyCart({ basket, productMap = {} }: MyCartProps): ReactE
     const { i18n } = useTranslation();
     const { currency } = useSite();
     const config = useConfig();
+    const { t: tFulfillment } = useFulfillmentFormat();
+    const fulfillmentSplit = useFulfillmentSplit(basket);
 
     const productItems = useMemo(() => {
-        return (basket?.productItems || []).map((item, index) => {
+        // Order lines by fulfillment city (same split as the cart page); lines without fulfillment data go last.
+        const allItems = basket?.productItems || [];
+        const assigned = new Set<string>();
+        const sections = fulfillmentSplit.groups.map((group) => {
+            const ids = new Set(group.items.map((groupItem) => groupItem.productId));
+            const items = allItems.filter((item) => item.productId && ids.has(item.productId));
+            items.forEach((item) => assigned.add(item.itemId ?? item.productId ?? ''));
+            return { group, items };
+        });
+        const rest = allItems.filter((item) => !assigned.has(item.itemId ?? item.productId ?? ''));
+
+        const renderItem = (item: ShopperBasketsV2.schemas['ProductItem'], index: number) => {
             const productData = item.itemId ? productMap[item.itemId] : undefined;
             const productName = item.productName || productData?.name || 'Product';
             const productId = productData?.master?.masterId || productData?.id || item.productId;
@@ -97,6 +113,7 @@ export default function MyCart({ basket, productMap = {} }: MyCartProps): ReactE
             );
 
             const quantity = item.quantity ?? 1;
+            const fulfillmentItem = fulfillmentSplit.getItem(item.productId);
 
             // Calculate savings using getPriceData (same logic as ProductPrice component)
             const priceData = getPriceData(enrichedProduct, { quantity });
@@ -170,6 +187,7 @@ export default function MyCart({ basket, productMap = {} }: MyCartProps): ReactE
                             <div className="mt-0.5 text-xs">
                                 {tCart('attributes.quantity')} {quantity}
                             </div>
+                            {fulfillmentItem && <CartLineFulfillmentInfo item={fulfillmentItem} />}
                         </div>
 
                         {/* Column 3: Tags (delivery, savings) */}
@@ -189,8 +207,38 @@ export default function MyCart({ basket, productMap = {} }: MyCartProps): ReactE
                     </div>
                 </div>
             );
-        });
-    }, [basket?.productItems, productMap, currency, i18n.language, config, t, tCart]);
+        };
+
+        return [
+            ...sections.flatMap(({ group, items }, groupIndex) => [
+                <div key={`group-${group.locationId}`} data-testid={`my-cart-group-${group.locationId}`}>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Truck className="size-4 shrink-0" aria-hidden />
+                        {tFulfillment('deliveryGroupTitle', {
+                            number: groupIndex + 1,
+                            city: group.city,
+                            defaultValue: 'Delivery group {{number}} – {{city}}',
+                        })}
+                        <span className="text-xs font-normal text-muted-foreground">
+                            {tFulfillment('postalCode', 'Postal code')}: {group.postalCode}
+                        </span>
+                    </h3>
+                </div>,
+                ...items.map(renderItem),
+            ]),
+            ...rest.map(renderItem),
+        ];
+    }, [
+        basket?.productItems,
+        productMap,
+        currency,
+        i18n.language,
+        config,
+        t,
+        tCart,
+        tFulfillment,
+        fulfillmentSplit,
+    ]);
 
     return (
         <div className="w-full">

@@ -1,7 +1,7 @@
 # Multi-City Product Availability, Fulfillment aur Delivery Information
 
 > **Status:** Design / Implementation Specification
-> **Scope:** PLP, PDP, Cart, Checkout, Browser Storage, SCAPI, Salesforce (custom objects)
+> **Scope:** PLP, PDP, Cart, Checkout, Browser Storage, SCAPI, SFCC (Business Manager custom objects)
 > **Language:** Roman Urdu (technical terms English mein)
 
 ---
@@ -15,7 +15,7 @@
 5. [Page-wise Requirements](#5-page-wise-requirements)
 6. [Browser Storage](#6-browser-storage)
 7. [Checkout aur SCAPI Payload](#7-checkout-aur-scapi-payload)
-8. [Salesforce Backend](#8-salesforce-backend)
+8. [SFCC Backend](#8-sfcc-backend-business-manager-custom-objects)
 9. [Snapshot Rules](#9-snapshot-rules)
 10. [Functional Rules](#10-functional-rules)
 11. [Is Project mein Implementation Guidance](#11-is-project-mein-implementation-guidance)
@@ -53,7 +53,7 @@ Har product ki fulfillment information **independently** maintain hogi.
 
 ### 1.3 Final Objective
 
-Product ki availability, fulfillment location, stock, distance aur lead time ko **PLP → PDP → Cart → Checkout → SCAPI → Salesforce** tak consistently preserve karna.
+Product ki availability, fulfillment location, stock, distance aur lead time ko **PLP → PDP → Cart → Checkout → SCAPI → SFCC Custom Objects** tak consistently preserve karna.
 
 ---
 
@@ -228,10 +228,10 @@ PLP  ──(Product + Availability JSON)──▶  PDP
                                           │
                        ┌──────────────────┴──────────────────┐
                        ▼                                     ▼
-                     Order ──▶ Order Items ──▶ Order_Item_Fulfillment__c
-                                                             │ Lookup
+                     Order ──▶ Order Items ──▶ orderItemFulfillment
+                                                             │ locationId (string ref)
                                                              ▼
-                                                 Fulfillment_Location__c
+                                                 fulfillmentLocation
 ```
 
 ---
@@ -434,7 +434,7 @@ Kutaisi ─ C
 
 ### 6.4 Important: Storage ka Source of Truth
 
-Browser storage sirf **client-side selection/context** hai. **Real cart Salesforce basket hai.** Isliye:
+Browser storage sirf **client-side selection/context** hai. **Real cart SFCC basket hai.** Isliye:
 
 - Basket line item par fulfillment `locationId` custom attribute ke taur par bhi save karein (dekhein [11.4](#114-basket-line-item-par-fulfillment-ka-source-of-truth)) taake refresh/device change par data na khoye.
 - Browser JSON ko **trusted input na** samjhein; checkout par stock, distance aur lead time server-side **re-validate** karein.
@@ -492,63 +492,255 @@ Steps:
 
 ---
 
-## 8. Salesforce Backend
+## 8. SFCC Backend (Business Manager Custom Objects)
 
-Location master aur order-specific fulfillment data **alag** rakha jata hai — do custom objects:
+Yeh data **Salesforce Core org mein nahi**, balki **B2C Commerce (SFCC) Business Manager** mein **Custom Object Types** ke taur par rakha jayega (BM → Administration → Site Development → Custom Object Types). Isliye `__c` suffix wale Salesforce objects use **nahi** hon ge; SFCC ke camelCase naam use hon ge.
 
-### 8.1 `Fulfillment_Location__c` (master)
+Location master aur order-specific fulfillment data **alag** rakha jata hai — do custom object types:
 
-| Field | Type | Purpose |
+| Custom Object Type | Purpose | Key | Storage Scope |
+|---|---|---|---|
+| `fulfillmentLocation` | Location master (LOC-001, LOC-002, LOC-003) | `locationId` | Organization |
+| `orderItemFulfillment` | Har order item ka fulfillment snapshot | `fulfillmentId` | Organization |
+
+> **SFCC ki limitations:** Custom objects mein Salesforce jaisa `Lookup` field nahi hota, is liye relationship **string key** (`locationId`, `orderNo`, `orderItemId`) se maintain hoti hai. Picklist ki jagah **enum-of-string** attribute use hota hai.
+
+### 8.1 `fulfillmentLocation` (master)
+
+| Attribute ID | Type | Purpose |
 |---|---|---|
-| `Name` | Auto Number/Text | Location record |
-| `Location_Id__c` | Text (Unique) | e.g. `LOC-001` |
-| `City__c` | Text | City name |
-| `Postal_Code__c` | Text | Postal code |
-| `Latitude__c` | Number | Latitude |
-| `Longitude__c` | Number | Longitude |
-| `Active__c` | Checkbox | Active/Inactive |
+| `locationId` (key) | String | Unique location ID, e.g. `LOC-001` |
+| `city` | String (mandatory) | City name |
+| `postalCode` | String | Postal code |
+| `latitude` | Double | Latitude |
+| `longitude` | Double | Longitude |
+| `active` | Boolean (default `true`) | Active/Inactive |
 
-### 8.2 `Order_Item_Fulfillment__c` (per order item)
+### 8.2 `orderItemFulfillment` (per order item)
 
 Har order item ke liye **ek** fulfillment record.
 
-| Field | Type | Purpose |
+| Attribute ID | Type | Purpose |
 |---|---|---|
-| `Order__c` | Lookup/Text | Related Order |
-| `Order_Item_Id__c` | Text | Related Order Item |
-| `Product_Id__c` | Text | Product ID |
-| `Product_Name__c` | Text | Product name |
-| `SKU__c` | Text | SKU |
-| `Quantity__c` | Number | Ordered quantity |
-| `Fulfillment_Location__c` | Lookup → `Fulfillment_Location__c` | Related location |
-| `Fulfillment_City__c` | Text | City snapshot |
-| `Postal_Code__c` | Text | Postal code snapshot |
-| `Stock_Level__c` | Number | Checkout-time stock snapshot |
-| `Distance__c` | Number | Distance snapshot |
-| `Distance_Unit__c` | Picklist | KM / Miles |
-| `Lead_Time__c` | Number | Lead time value |
-| `Lead_Time_Unit__c` | Picklist | Hours / Days |
-| `Fulfillment_Status__c` | Picklist | Pending / Confirmed / Shipped / Delivered |
-| `Created_From_SCAPI__c` | Checkbox | SCAPI source indicator |
+| `fulfillmentId` (key) | String | Unique ID, e.g. `<orderNo>-<orderItemId>` |
+| `orderNo` | String | Related Order (`Order.orderNo`) |
+| `orderItemId` | String | Related Order Item (product line item `itemId`) |
+| `productId` | String | Product ID |
+| `productName` | String | Product name |
+| `sku` | String | SKU |
+| `quantity` | Integer | Ordered quantity |
+| `locationId` | String | Reference → `fulfillmentLocation.locationId` |
+| `city` | String | City snapshot |
+| `postalCode` | String | Postal code snapshot |
+| `stockLevel` | Integer | Checkout-time stock snapshot |
+| `distance` | Double | Distance snapshot |
+| `distanceUnit` | Enum of String | `KM` / `MILES` |
+| `leadTime` | Double | Lead time value |
+| `leadTimeUnit` | Enum of String | `HOURS` / `DAYS` |
+| `fulfillmentStatus` | Enum of String | `PENDING` / `CONFIRMED` / `SHIPPED` / `DELIVERED` |
+| `createdFromScapi` | Boolean | SCAPI source indicator |
 
 ### 8.3 Relationship
 
 ```text
-Fulfillment_Location__c
-          │ Lookup
-          ▼
-Order_Item_Fulfillment__c
-          ├── Order
-          ├── Order Item
-          ├── Product
-          ├── Quantity
-          ├── Stock (snapshot)
-          ├── Distance (snapshot)
-          ├── Lead Time (snapshot)
-          └── Fulfillment Status
+fulfillmentLocation (locationId)
+          ▲
+          │ locationId (string reference)
+          │
+orderItemFulfillment (fulfillmentId)
+          ├── orderNo      → Order
+          ├── orderItemId  → Order Item (Product Line Item)
+          ├── productId / sku / quantity
+          ├── stockLevel   (snapshot)
+          ├── distance     (snapshot)
+          ├── leadTime     (snapshot)
+          └── fulfillmentStatus
 ```
 
-### 8.4 Example: 1 Order, 3 Cities
+### 8.4 Metadata XML (object types create karne ke liye)
+
+Object types **code se** define hote hain aur import kiye jate hain. File: `meta/custom-objecttype-definitions.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://www.demandware.com/xml/impex/metadata/2006-10-31">
+    <custom-type type-id="fulfillmentLocation">
+        <display-name xml:lang="x-default">Fulfillment Location</display-name>
+        <staging-mode>source-to-target</staging-mode>
+        <storage-scope>organization</storage-scope>
+        <key-definition attribute-id="locationId">
+            <display-name xml:lang="x-default">Location ID</display-name>
+            <type>string</type>
+            <min-length>1</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="active">
+                <display-name xml:lang="x-default">Active</display-name>
+                <type>boolean</type>
+                <default-value>true</default-value>
+            </attribute-definition>
+            <attribute-definition attribute-id="city">
+                <display-name xml:lang="x-default">City</display-name>
+                <type>string</type>
+                <mandatory-flag>true</mandatory-flag>
+            </attribute-definition>
+            <attribute-definition attribute-id="latitude">
+                <display-name xml:lang="x-default">Latitude</display-name>
+                <type>double</type>
+            </attribute-definition>
+            <attribute-definition attribute-id="longitude">
+                <display-name xml:lang="x-default">Longitude</display-name>
+                <type>double</type>
+            </attribute-definition>
+            <attribute-definition attribute-id="postalCode">
+                <display-name xml:lang="x-default">Postal Code</display-name>
+                <type>string</type>
+            </attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="general">
+                <display-name xml:lang="x-default">General</display-name>
+                <attribute attribute-id="locationId"/>
+                <attribute attribute-id="city"/>
+                <attribute attribute-id="postalCode"/>
+                <attribute attribute-id="latitude"/>
+                <attribute attribute-id="longitude"/>
+                <attribute attribute-id="active"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+
+    <custom-type type-id="orderItemFulfillment">
+        <display-name xml:lang="x-default">Order Item Fulfillment</display-name>
+        <staging-mode>no-staging</staging-mode>
+        <storage-scope>organization</storage-scope>
+        <key-definition attribute-id="fulfillmentId">
+            <display-name xml:lang="x-default">Fulfillment ID</display-name>
+            <type>string</type>
+            <min-length>1</min-length>
+        </key-definition>
+        <attribute-definitions>
+            <attribute-definition attribute-id="orderNo"><type>string</type><mandatory-flag>true</mandatory-flag></attribute-definition>
+            <attribute-definition attribute-id="orderItemId"><type>string</type></attribute-definition>
+            <attribute-definition attribute-id="productId"><type>string</type></attribute-definition>
+            <attribute-definition attribute-id="productName"><type>string</type></attribute-definition>
+            <attribute-definition attribute-id="sku"><type>string</type></attribute-definition>
+            <attribute-definition attribute-id="quantity"><type>int</type></attribute-definition>
+            <attribute-definition attribute-id="locationId"><type>string</type><mandatory-flag>true</mandatory-flag></attribute-definition>
+            <attribute-definition attribute-id="city"><type>string</type></attribute-definition>
+            <attribute-definition attribute-id="postalCode"><type>string</type></attribute-definition>
+            <attribute-definition attribute-id="stockLevel"><type>int</type></attribute-definition>
+            <attribute-definition attribute-id="distance"><type>double</type></attribute-definition>
+            <attribute-definition attribute-id="distanceUnit">
+                <type>enum-of-string</type>
+                <value-definitions>
+                    <value-definition default="true"><value>KM</value></value-definition>
+                    <value-definition><value>MILES</value></value-definition>
+                </value-definitions>
+            </attribute-definition>
+            <attribute-definition attribute-id="leadTime"><type>double</type></attribute-definition>
+            <attribute-definition attribute-id="leadTimeUnit">
+                <type>enum-of-string</type>
+                <value-definitions>
+                    <value-definition default="true"><value>DAYS</value></value-definition>
+                    <value-definition><value>HOURS</value></value-definition>
+                </value-definitions>
+            </attribute-definition>
+            <attribute-definition attribute-id="fulfillmentStatus">
+                <type>enum-of-string</type>
+                <value-definitions>
+                    <value-definition default="true"><value>PENDING</value></value-definition>
+                    <value-definition><value>CONFIRMED</value></value-definition>
+                    <value-definition><value>SHIPPED</value></value-definition>
+                    <value-definition><value>DELIVERED</value></value-definition>
+                </value-definitions>
+            </attribute-definition>
+            <attribute-definition attribute-id="createdFromScapi"><type>boolean</type></attribute-definition>
+        </attribute-definitions>
+        <group-definitions>
+            <attribute-group group-id="general">
+                <display-name xml:lang="x-default">General</display-name>
+                <attribute attribute-id="orderNo"/>
+                <attribute attribute-id="orderItemId"/>
+                <attribute attribute-id="productId"/>
+                <attribute attribute-id="productName"/>
+                <attribute attribute-id="sku"/>
+                <attribute attribute-id="quantity"/>
+                <attribute attribute-id="locationId"/>
+                <attribute attribute-id="city"/>
+                <attribute attribute-id="postalCode"/>
+                <attribute attribute-id="stockLevel"/>
+                <attribute attribute-id="distance"/>
+                <attribute attribute-id="distanceUnit"/>
+                <attribute attribute-id="leadTime"/>
+                <attribute attribute-id="leadTimeUnit"/>
+                <attribute attribute-id="fulfillmentStatus"/>
+                <attribute attribute-id="createdFromScapi"/>
+            </attribute-group>
+        </group-definitions>
+    </custom-type>
+</metadata>
+```
+
+### 8.5 Master Data (location records)
+
+File: `custom-objects/fulfillmentLocation.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<custom-objects xmlns="http://www.demandware.com/xml/impex/customobject/2006-10-31">
+    <custom-object type-id="fulfillmentLocation" object-id="LOC-001">
+        <object-attribute attribute-id="active">true</object-attribute>
+        <object-attribute attribute-id="city">Tbilisi</object-attribute>
+        <object-attribute attribute-id="latitude">41.7151</object-attribute>
+        <object-attribute attribute-id="longitude">44.8271</object-attribute>
+        <object-attribute attribute-id="postalCode">0105</object-attribute>
+    </custom-object>
+    <custom-object type-id="fulfillmentLocation" object-id="LOC-002">
+        <object-attribute attribute-id="active">true</object-attribute>
+        <object-attribute attribute-id="city">Batumi</object-attribute>
+        <object-attribute attribute-id="postalCode">6000</object-attribute>
+    </custom-object>
+    <custom-object type-id="fulfillmentLocation" object-id="LOC-003">
+        <object-attribute attribute-id="active">true</object-attribute>
+        <object-attribute attribute-id="city">Kutaisi</object-attribute>
+        <object-attribute attribute-id="postalCode">4600</object-attribute>
+    </custom-object>
+</custom-objects>
+```
+
+(Batumi/Kutaisi ka latitude/longitude business se confirm karke add karein.)
+
+### 8.6 Import kaise karein
+
+Dono XML files ko ek zip mein rakhein:
+
+```text
+fulfillment-import/
+├── meta/custom-objecttype-definitions.xml
+└── custom-objects/fulfillmentLocation.xml
+```
+
+Phir:
+
+- **BM se:** Administration → Site Development → **Site Import & Export** → zip upload → import.
+- **CLI se:** B2C CLI / `sfcc-ci` ke through instance par upload + import (CI mein bhi chal sakta hai).
+
+Import ke baad `fulfillmentLocation` aur `orderItemFulfillment` **Custom Object Types** list mein nazar aane chahiye.
+
+### 8.7 Order ke waqt record kaise likha jayega
+
+Shopper SCAPI se custom object direct create nahi hota. Fulfillment info ko basket/order tak pohnchane aur records likhne ka flow:
+
+1. Storefront basket line item par `c_fulfillmentLocationId`, `c_fulfillmentCity`, `c_postalCode`, `c_distance`, `c_leadTime` wagaira custom attributes set karta hai (Shopper Baskets API ke `productItems` par `c_` properties; pehle **System Object Types → ProductLineItem** mein yeh attributes define karne honge).
+2. Order place hone par SFCC server-side **order hook** ya **Custom SCAPI endpoint** chalta hai.
+3. Woh script har `ProductLineItem` ke liye `CustomObjectMgr.createCustomObject('orderItemFulfillment', fulfillmentId)` se ek record banata hai aur snapshot values (stock, distance, lead time) copy karta hai.
+4. Yeh sab **ek transaction** mein ho (`Transaction.wrap`) taake partial write na ho.
+5. Snapshot **server-side values** se bane, browser JSON se seedha nahi (checkout par stock/lead time re-validate karke).
+
+> Alternative: OCAPI Data API (`/custom_objects/orderItemFulfillment/{id}`) se bhi likha ja sakta hai, lekin hook/Custom SCAPI approach behtar hai kyunke order ke saath atomic hai.
+
+### 8.8 Example: 1 Order, 3 Cities
 
 ```text
 Order: ORD-1001
@@ -556,9 +748,9 @@ Order: ORD-1001
 ├── Order Item 2 → Product B
 └── Order Item 3 → Product C
 
-OF-001  ORD-1001  Product A  Tbilisi  0105  Stock 15  8 KM   2 Days
-OF-002  ORD-1001  Product B  Batumi   6000  Stock 5   15 KM  3 Days
-OF-003  ORD-1001  Product C  Kutaisi  4600  Stock 7   20 KM  4 Days
+ORD-1001-1  Product A  LOC-001  Tbilisi  0105  Stock 15  8 KM   2 Days
+ORD-1001-2  Product B  LOC-002  Batumi   6000  Stock 5   15 KM  3 Days
+ORD-1001-3  Product C  LOC-003  Kutaisi  4600  Stock 7   20 KM  4 Days
 ```
 
 ---
@@ -569,10 +761,10 @@ Checkout ke waqt ki values fulfillment record mein **snapshot** ke taur par save
 
 | Snapshot | Example | Field |
 |---|---|---|
-| Stock | Checkout par 15 → baad mein 10 | `Stock_Level__c = 15` (rehta hai) |
-| Distance | User → Tbilisi = 8 KM | `Distance__c = 8`, `Distance_Unit__c = KM` |
-| Lead Time | 2 Days | `Lead_Time__c = 2`, `Lead_Time_Unit__c = DAYS` |
-| City / Postal | Tbilisi / 0105 | `Fulfillment_City__c`, `Postal_Code__c` |
+| Stock | Checkout par 15 → baad mein 10 | `stockLevel = 15` (rehta hai) |
+| Distance | User → Tbilisi = 8 KM | `distance = 8`, `distanceUnit = KM` |
+| Lead Time | 2 Days | `leadTime = 2`, `leadTimeUnit = DAYS` |
+| City / Postal | Tbilisi / 0105 | `city`, `postalCode` |
 
 ---
 
@@ -587,7 +779,7 @@ Checkout ke waqt ki values fulfillment record mein **snapshot** ke taur par save
 7. Browser storage mein product aur fulfillment info saath ho.
 8. Cart update par browser JSON bhi update ho.
 9. Checkout par browser data SCAPI payload mein convert ho.
-10. Salesforce mein order-level aur product-level fulfillment relationship preserve rahe.
+10. SFCC mein order-level aur product-level fulfillment relationship preserve rahe.
 11. Har order item ki fulfillment info separately maintain ho.
 12. Historical order ke liye checkout-time stock, distance, lead time preserve hon.
 13. Locations master object mein centrally manage hon.
@@ -599,25 +791,26 @@ Checkout ke waqt ki values fulfillment record mein **snapshot** ke taur par save
 
 Yeh section is repo ([CLAUDE.md](../CLAUDE.md)) ke rules ke mutabiq hai.
 
-### 11.1 Suggested File Layout
+### 11.1 File Layout (implemented)
 
-CLAUDE.md rule: *naya commerce concept = apna folder in `src/lib/`.*
+CLAUDE.md rule: *naya commerce concept = apna folder in `src/lib/`.* `src/components/fulfillment/` pehle se BOPIS ka hai, is liye is feature ka naam **`fulfillment-location`** hai.
 
 ```text
-src/lib/fulfillment/
-├── types.ts                      # FulfillmentLocation, ProductAvailability, CartFulfillment
-├── locations.ts                  # location master (ya API se fetch)
-├── availability.server.ts        # product availability fetch (server)
-├── storage.ts                    # browser JSON read/write/update helpers
-├── group-by-location.ts          # cart items → delivery groups
-├── validate.server.ts            # checkout-time re-validation
-└── scapi-payload.ts              # storage → SCAPI payload
+src/lib/fulfillment-location/
+├── types.ts                      # LocationAvailability, CartFulfillment, CartFulfillmentItem, payload types
+├── product-availability.json     # sample availability data (40 products x 3 cities)
+├── availability.ts               # master/variant lookup, best-location sorting
+├── cart-fulfillment.ts           # pure state: upsert/remove/qty/changeLocation, group, reconcile, parse
+├── storage.ts                    # localStorage JSON + useCartFulfillmentState (SSR-safe)
+├── selected-location.ts          # PDP selection store (per product)
+├── record-added-item.ts          # add-to-cart ke baad location JSON mein save
+└── payload.ts                    # storage -> SCAPI payload, basket c_* attributes
 
-src/components/fulfillment/
-├── availability-badge.tsx        # PLP card summary
-├── location-selector.tsx         # PDP selector
-├── location-group.tsx            # Cart/Checkout group heading + items
-└── stories/                      # Storybook stories (mandatory)
+src/components/fulfillment-location/
+├── availability-summary.tsx      # PLP card summary
+├── location-selector.tsx         # PDP location picker
+├── fulfillment-groups.tsx        # Cart + Checkout city-wise groups (+ JSON sync)
+└── use-fulfillment-format.ts     # lead time / distance labels (i18n)
 ```
 
 Har `.ts/.tsx` file par **Apache 2.0 copyright header** lazmi hai (CLAUDE.md dekhein).
@@ -714,7 +907,7 @@ Is package mein har change ke liye changeset lazmi hai: repo root se `pnpm chang
 - [ ] Add / remove / qty ± / location change par browser JSON update hota hai.
 - [ ] Checkout par stock/lead time server-side re-validate hota hai.
 - [ ] SCAPI payload mein har item ka `fulfillment` block hai.
-- [ ] Salesforce mein har order item ke liye ek `Order_Item_Fulfillment__c` record bana hai, jo `Fulfillment_Location__c` se linked hai.
+- [ ] SFCC mein har order item ke liye ek `orderItemFulfillment` custom object record bana hai, jis ka `locationId` `fulfillmentLocation` se match karta hai.
 - [ ] Snapshot values (stock, distance, lead time) baad mein inventory change hone par bhi same rehti hain.
 - [ ] Nayi location sirf master data se add ho jati hai.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test` aur Storybook tests pass.
@@ -728,5 +921,34 @@ Is package mein har change ke liye changeset lazmi hai: repo root se `pnpm chang
 3. **Availability ka source:** SCAPI/Inventory (ATS per inventory list) se, custom API se, ya static JSON se?
 4. **Browser storage:** `localStorage` ya cookie? (CLAUDE.md rule 16 cookies prefer karta hai)
 5. **Order-level ETA:** multiple groups mein overall delivery date sabse zyada lead time hogi?
-6. **Salesforce write path:** `Order_Item_Fulfillment__c` records SCAPI hook/Custom API se banenge ya order-created event/flow se?
+6. **SFCC write path:** `orderItemFulfillment` records order hook se banenge ya Custom SCAPI endpoint se?
 7. **Existing extensions (`bopis`, `multiship`):** kya inhein extend karna hai ya yeh feature independent extension hoga?
+
+---
+
+## 15. Frontend Implementation Status
+
+Branch `nestosh/multi-checkout-flow`. Sirf frontend + browser storage; backend (SFCC custom objects, order hook) abhi baqi hai.
+
+| Requirement | Status | Kahan |
+|---|---|---|
+| PLP: city, stock, postal code, distance, lead time | Done | `product-tile/index.tsx` -> `ProductAvailabilitySummary` |
+| PDP: location-wise details + selector | Done | `product-view/product-view.tsx` -> `LocationSelector` |
+| Add to Cart: selected location save | Done | `hooks/product/use-product-actions.ts` -> `recordAddedItemFulfillment` |
+| Browser storage JSON (add / remove / qty / location) | Done | `lib/fulfillment-location/storage.ts`, `cart-fulfillment.ts` |
+| Cart: city-wise groups | Done | `cart/cart-content.tsx` -> `FulfillmentGroups` |
+| Checkout: numbered delivery groups | Done | `checkout/checkout-form-page.tsx` -> `FulfillmentGroups` |
+| SCAPI payload builder | Done (helper only) | `payload.ts` -> `buildFulfillmentPayload`; order place flow se abhi connect nahi |
+| Server-side re-validation at checkout | Pending | backend |
+| SFCC custom objects + `orderItemFulfillment` records | Pending | backend (section 8) |
+| Basket line `c_*` attributes | Pending | BM mein attributes + `toBasketLineCustomAttributes` wiring |
+
+### Known limitations (jaan bujh kar)
+
+1. **Ek product = ek location per cart.** Salesforce basket mein same `productId` ki ek hi line hoti hai, is liye same product ko do cities se add karne par location **replace** hoti hai (do lines nahi banti). Section 5.3 ka "alag location = alag line" backend/basket-attribute (`c_fulfillmentLocationId` par line split) ke baad mumkin hoga.
+2. **Data static hai.** Availability `product-availability.json` se aati hai (sample stock). Asli inventory API se replace karni hogi; `availability.ts` sirf wahi ek jagah hai jo badalni hai.
+3. **Storage sync sirf Cart/Checkout par.** Cart ya checkout page khulne par JSON basket ke mutabiq reconcile hota hai (removed products drop, quantities update). Mini-cart se remove karne par JSON agli cart/checkout visit par update hota hai; UI hamesha basket se derive hoti hai, is liye stale data kabhi dikhta nahi.
+4. **`localStorage` use hua hai** (requirement ke mutabiq). SSR snapshot khali hota hai, data hydration ke baad aata hai (hydration mismatch nahi). CLAUDE.md rule 16 cookies prefer karta hai — open question 4.
+5. **Stock 0 wali location** PDP par disabled dikhti hai; default selection hamesha best in-stock location hoti hai. Add-to-cart button ko location-stock se gate karna abhi nahi kiya (existing SCAPI inventory check hi authoritative hai).
+6. Sets/bundles ke liye fulfillment data nahi (unka availability record nahi hai).
+7. Translations abhi sirf `en-US` / `en-GB` mein hain (`fulfillmentLocation` namespace); baqi locales English par fall back karte hain.
