@@ -108,6 +108,8 @@ export const routes = {
     accountOverview: '/account/overview',
     accountOrders: '/account/orders',
     accountOrderDetail: '/account/orders/:orderNo',
+    accountOrderReturn: '/account/orders/:orderNo/return',
+    accountReturnDetail: '/account/returns/:rmaNo',
     accountAddresses: '/account/addresses',
     accountPaymentMethods: '/account/payment-methods',
     accountStorePreferences: '/account/store-preferences',

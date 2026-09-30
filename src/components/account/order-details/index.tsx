@@ -61,6 +61,7 @@ import {
 import ShipmentShippingStatusBadge from '@/components/account/order-details/shipment-shipping-status-badge';
 import OrderStatusHeader from '@/components/account/order-details/order-status-header';
 import PaymentMethodCard from '@/components/account/order-details/payment-method-card';
+import { ReturnInProgressBadge, ReturnOrExchangeButton } from '@/components/returns';
 
 export type { ProductDataById };
 
@@ -548,6 +549,12 @@ export function OrderDetails({ order, productsById, omsMetaData }: OrderDetailsP
                                 />
                             )}
                         </UITarget>
+                        {order.orderNo && !isOrderCancelled(order) && (
+                            <>
+                                <ReturnOrExchangeButton orderNo={order.orderNo} className="w-full sm:w-auto" />
+                                <ReturnInProgressBadge orderNo={order.orderNo} />
+                            </>
+                        )}
                         <UITarget targetId="sfcc.myAccount.orderDetails.cancel">
                             {omsMetaData && (
                                 <CancelItemsAction
