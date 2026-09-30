@@ -29,13 +29,13 @@ interface BuildDeliveriesOptions {
  */
 export function buildDeliveries<T extends DeliveryLineInput>(
     items: readonly T[],
-    postcode: string | null | undefined,
+    cityId: string | null | undefined,
     { today, trackingSeed }: BuildDeliveriesOptions = {}
 ): Delivery<T>[] {
     const deliveries = new Map<string, Delivery<T>>();
     for (const item of items) {
         if (item.quantity <= 0) continue;
-        const promise = calculateDeliveryDate({ postcode, productId: item.productId, quantity: item.quantity, today });
+        const promise = calculateDeliveryDate({ cityId, productId: item.productId, quantity: item.quantity, today });
         const key = `${promise.locationId}|${promise.leadTimeDays}|${promise.transitDays}`;
         const existing = deliveries.get(key);
         if (existing) {
@@ -52,6 +52,7 @@ export function buildDeliveries<T extends DeliveryLineInput>(
             transitDays: promise.transitDays,
             deliveryDate: promise.deliveryDate,
             inStock: promise.inStock,
+            maxAvailableUnits: promise.maxAvailableUnits,
             items: [item],
             ...(trackingSeed
                 ? { trackingNumber: generateTrackingNumber(promise.locationId, `${trackingSeed}-${id}`) }

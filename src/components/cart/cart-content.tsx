@@ -51,8 +51,8 @@ import { getFirstPickupStore, filterPickupProductItems } from '@/extensions/bopi
 import { usePickup } from '@/extensions/bopis/context/pickup-context';
 // @sfdc-extension-block-end SFDC_EXT_BOPIS
 import { UITarget } from '@/targets/ui-target';
-import { CartGroupTitle, CartLineFulfillmentInfo } from '@/components/fulfillment-location/cart-group-title';
-import { useFulfillmentSplit } from '@/components/fulfillment-location/use-fulfillment-split';
+import { CartGroupTitle, CartLineDeliveryInfo } from '@/components/delivery-promise/cart-delivery';
+import { useCartDeliveries } from '@/components/delivery-promise/use-cart-deliveries';
 
 // utils
 import {
@@ -286,7 +286,7 @@ export default function CartContent({
         };
     }, []);
 
-    const fulfillmentSplit = useFulfillmentSplit(basket);
+    const cartDeliveries = useCartDeliveries(basket);
 
     // Check if cart is empty using the basket prop from loader data
     if (!basket?.productItems?.length) {
@@ -305,14 +305,12 @@ export default function CartContent({
     // @sfdc-extension-block-end SFDC_EXT_BOPIS
     const deliveryItems = deliveryItemsState.value;
 
-    // Split delivery items by fulfillment city; items with no fulfillment data stay in the default card.
-    const fulfillmentSections = fulfillmentSplit.groups
-        .map((group) => {
-            const groupProductIds = new Set(group.items.map((item) => item.productId));
-            return {
-                group,
-                items: deliveryItems.filter((item) => item.productId && groupProductIds.has(item.productId)),
-            };
+    // Split delivery items by the delivery engine's deliveries (hub + date); items with no hub stock data stay in
+    // the default card.
+    const fulfillmentSections = cartDeliveries.deliveries
+        .map((delivery) => {
+            const itemIds = new Set(delivery.items.map((line) => line.itemId));
+            return { delivery, items: deliveryItems.filter((item) => item.itemId && itemIds.has(item.itemId)) };
         })
         .filter((section) => section.items.length > 0);
     const assignedItemIds = new Set(fulfillmentSections.flatMap((section) => section.items.map((item) => item.itemId)));
@@ -362,15 +360,15 @@ export default function CartContent({
         );
     };
 
-    // Same actions (Remove / Edit / Wishlist) followed by the line's fulfillment details in the left column
+    // Same actions (Remove / Edit / Wishlist) followed by the line's delivery date and lead time
     const cartSecondaryActionsWithFulfillment = (product: EnrichedProductItem): ReactElement | undefined => {
         const actions = cartSecondaryActions(product);
-        const fulfillmentItem = fulfillmentSplit.getItem(product.productId);
-        if (!fulfillmentItem) return actions;
+        const delivery = cartDeliveries.getDelivery(product.itemId);
+        if (!delivery) return actions;
         return (
             <div>
                 {actions}
-                <CartLineFulfillmentInfo item={fulfillmentItem} />
+                <CartLineDeliveryInfo delivery={delivery} />
             </div>
         );
     };
@@ -505,13 +503,13 @@ export default function CartContent({
                         )}
                         {/* @sfdc-extension-block-end SFDC_EXT_BOPIS */}
                         {/* One default-styled delivery card per fulfillment city (multi-city fulfillment) */}
-                        {fulfillmentSections.map(({ group, items }, index) => (
+                        {fulfillmentSections.map(({ delivery, items }, index) => (
                             <div
-                                key={group.locationId}
+                                key={delivery.id}
                                 data-slot="cart-delivery-group"
                                 className="md:p-8 p-3 rounded-ui border border-muted-foreground/10 mb-3">
                                 <CartGroupTitle
-                                    group={group}
+                                    delivery={delivery}
                                     itemCount={items.length}
                                     totalCount={deliveryItems.length}
                                 />

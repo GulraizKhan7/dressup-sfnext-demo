@@ -53,7 +53,7 @@ import type { ComponentType } from '@/components/region';
 import { ProductImageContainer } from '@/components/product-image';
 import ProductPrice from '@/components/product-price';
 import CurrentPrice from '@/components/product-price/current-price';
-import { ProductAvailabilitySummary } from '@/components/fulfillment-location/availability-summary';
+import { ProductAvailabilitySummary } from '@/components/delivery-promise/availability-summary';
 import { StarRating } from '@/components/product-ratings/star-rating';
 import { UITarget } from '@/targets/ui-target';
 import { Card } from '@/components/ui/card';

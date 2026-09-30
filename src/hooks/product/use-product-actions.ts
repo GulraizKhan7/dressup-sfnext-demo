@@ -47,7 +47,6 @@ import {
     isInStock as isProductInStock,
 } from '@/lib/product/inventory-utils';
 import { useScapiFetcher } from '@/hooks/use-scapi-fetcher';
-import { recordAddedItemFulfillment } from '@/lib/fulfillment-location';
 interface ProductSelectionValues {
     product: ShopperProducts.schemas['Product'];
     variant?: ShopperProducts.schemas['Variant'];
@@ -553,8 +552,6 @@ export function useProductActions({
             setIsAddingToOrUpdatingCart(false);
             // Only open mini cart for add to cart action, not edit cart
             if (!itemId) {
-                // Keep the selected fulfillment location with the item in browser storage
-                recordAddedItemFulfillment(basketData, currentVariant?.productId ?? product.id);
                 setMiniCartOpen(true);
             }
         } else if (cartFetcher.data?.success === false) {

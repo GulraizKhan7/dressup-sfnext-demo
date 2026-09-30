@@ -76,60 +76,6 @@
     ],
     "inventory": [
         {
-            "productId": "REPLACE_WITH_SANDBOX_PRODUCT_ID_1",
-            "scenario": "In stock in every city",
-            "stock": {
-                "HUB-TBS": 12,
-                "HUB-BUS": 6,
-                "HUB-KUT": 4
-            }
-        },
-        {
-            "productId": "REPLACE_WITH_SANDBOX_PRODUCT_ID_2",
-            "scenario": "Tbilisi only",
-            "stock": {
-                "HUB-TBS": 8,
-                "HUB-BUS": 0,
-                "HUB-KUT": 0
-            }
-        },
-        {
-            "productId": "REPLACE_WITH_SANDBOX_PRODUCT_ID_3",
-            "scenario": "Batumi only",
-            "stock": {
-                "HUB-TBS": 0,
-                "HUB-BUS": 5,
-                "HUB-KUT": 0
-            }
-        },
-        {
-            "productId": "REPLACE_WITH_SANDBOX_PRODUCT_ID_4",
-            "scenario": "Kutaisi only",
-            "stock": {
-                "HUB-TBS": 0,
-                "HUB-BUS": 0,
-                "HUB-KUT": 3
-            }
-        },
-        {
-            "productId": "REPLACE_WITH_SANDBOX_PRODUCT_ID_5",
-            "scenario": "Tbilisi and Kutaisi, not Batumi",
-            "stock": {
-                "HUB-TBS": 2,
-                "HUB-BUS": 0,
-                "HUB-KUT": 7
-            }
-        },
-        {
-            "productId": "REPLACE_WITH_SANDBOX_PRODUCT_ID_6",
-            "scenario": "Out of stock everywhere",
-            "stock": {
-                "HUB-TBS": 0,
-                "HUB-BUS": 0,
-                "HUB-KUT": 0
-            }
-        },
-        {
             "productId": "DU-893268",
             "productName": "s.OLIVER - Knitted layering pullover",
             "brand": "s.Oliver",

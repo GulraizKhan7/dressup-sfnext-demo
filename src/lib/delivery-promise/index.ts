@@ -18,3 +18,4 @@ export * from './city-management';
 export * from './calculate-delivery-date';
 export * from './build-deliveries';
 export * from './tracking';
+export * from './shopper-city';

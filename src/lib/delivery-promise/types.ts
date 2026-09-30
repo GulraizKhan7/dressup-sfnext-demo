@@ -57,7 +57,9 @@ export interface CityManagementData {
 }
 
 export interface DeliveryPromiseInput {
-    /** Shopper (shipping) postcode. Missing or unknown falls back to the default city. */
+    /** City the shopper selected. Missing or unknown falls back to the default city. Takes precedence over `postcode`. */
+    cityId?: string | null;
+    /** Legacy: shopper postcode, resolved to a city only when `cityId` is not given. */
     postcode?: string | null;
     /** Master product id or variant id. */
     productId: string;
@@ -80,6 +82,23 @@ export interface DeliveryPromise {
     deliveryDate: string;
     /** `false` when no hub has enough stock and the fallback hub is used. */
     inStock: boolean;
+    /** Most units any single hub holds for the product (0 when unknown); used for "only X available". */
+    maxAvailableUnits: number;
+}
+
+/** One hub's availability for a product, seen from the shopper's city (in or out of stock). */
+export interface HubAvailability {
+    locationId: string;
+    cityId: string;
+    city: string;
+    stockLevel: number;
+    /** `true` when the hub holds at least the requested quantity. */
+    canFulfill: boolean;
+    distanceKm: number;
+    leadTimeDays: number;
+    transitDays: number;
+    /** `YYYY-MM-DD` the hub could deliver; meaningful only when `canFulfill`. */
+    deliveryDate: string;
 }
 
 export interface DeliveryLineInput {
@@ -97,6 +116,8 @@ export interface Delivery<T extends DeliveryLineInput = DeliveryLineInput> {
     transitDays: number;
     deliveryDate: string;
     inStock: boolean;
+    /** See `DeliveryPromise.maxAvailableUnits`. */
+    maxAvailableUnits: number;
     items: T[];
     trackingNumber?: string;
 }

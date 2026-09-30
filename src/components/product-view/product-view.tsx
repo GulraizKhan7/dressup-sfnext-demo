@@ -18,7 +18,7 @@ import type { ShopperProducts } from '@/scapi';
 import ImageGallery from '@/components/image-gallery';
 import ProductInfo from '@/components/product-view/product-info';
 import ProductCartActions from '@/components/product-cart-actions';
-import { LocationSelector } from '@/components/fulfillment-location/location-selector';
+import { ProductDeliveryInfo } from '@/components/delivery-promise/product-delivery-info';
 import ProductViewProvider, { useOptionalProductView } from '@/providers/product-view';
 import { useProductImages } from '@/hooks/product/use-product-images';
 import { useSelectedVariations } from '@/hooks/product/use-selected-variations';
@@ -89,7 +89,7 @@ export default function ProductView({ product, mode = 'add' }: ProductViewProps)
                     enableDeliveryEstimatePresentation
                     // @sfdc-extension-block-end SFDC_EXT_BOPIS
                 />
-                <LocationSelector productId={product.id} />
+                <ProductDeliveryInfo productId={product.id} />
                 <ProductCartActions product={product} />
                 <UITarget targetId="sfcc.pdp.returnsWarranty" />
                 <UITarget targetId="sfcc.pdp.collapsibles" />

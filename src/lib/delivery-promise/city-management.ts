@@ -21,8 +21,6 @@ export const cityManagement = cityManagementJson as unknown as CityManagementDat
 
 const inventoryIndex = new Map<string, InventoryEntry>();
 for (const entry of cityManagement.inventory) {
-    // Template rows in the fixture have no real product behind them.
-    if (entry.productId.startsWith('REPLACE_WITH_')) continue;
     inventoryIndex.set(entry.productId, entry);
     for (const variantId of entry.variantIds ?? []) inventoryIndex.set(variantId, entry);
 }
@@ -43,6 +41,11 @@ export function getInventoryEntry(productId: string | null | undefined): Invento
 
 export function getHubStock(productId: string | null | undefined, hubId: string): number {
     return getInventoryEntry(productId)?.stock[hubId] ?? 0;
+}
+
+/** City for an id; unknown or missing ids fall back to the default city. */
+export function resolveCity(cityId: string | null | undefined): CityConfig {
+    return (cityId ? getCityById(cityId) : undefined) ?? (getCityById(cityManagement.defaultCityId) as CityConfig);
 }
 
 /** City for a shopper postcode: the longest matching prefix wins, otherwise the default city. */
