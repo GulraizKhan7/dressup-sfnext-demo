@@ -140,7 +140,7 @@ export default function Header({
  
       {/* 3. Sub Navigation */}
       <div
-        className="w-full py-4 px-4 md:px-8 lg:px-16 text-[1ag8px]"
+        className="w-full px-4 md:px-8 lg:px-16 [&_[data-slot=navigation-menu]]:w-full [&_[data-slot=navigation-menu]]:max-w-none [&_[data-slot=navigation-menu-list]]:w-full [&_[data-slot=navigation-menu-list]]:justify-around"
         style={{ borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}
       >
         <ResponsiveNavigationMenu
