@@ -1,7 +1,8 @@
-import { Search, User, ShoppingBag, ChevronDown } from 'lucide-react';
+import { User, ShoppingBag, ChevronDown } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useRef } from 'react';
 import { useRouteLoaderData } from 'react-router';
+import SearchBar from '@/components/header/search';
 import ResponsiveNavigationMenu from '@/components/navigation-menu-mega';
 import { CitySelector } from '@/components/delivery-promise/city-selector';
 import type { LoaderData as AppLoaderData } from '@/routes/_app';
@@ -9,6 +10,8 @@ import type { LoaderData as AppLoaderData } from '@/routes/_app';
 const INK = '#111111';
 const MUTED = '#4b5563';
 const LINE = '#e5e7eb';
+const SEARCH_INPUT_CLASS_NAME =
+  'h-[48px] rounded-md border-transparent bg-[#f0f3f5] w-4xl px-4 pl-10 text-[18px] shadow-none placeholder:text-[#64748b] focus-visible:border-transparent focus-visible:ring-black';
 const headerStyle = {
   background: '#fff',
   color: INK,
@@ -38,22 +41,6 @@ const CATEGORY_LINKS = [
 
 const iconStyle = (color: string) => ({ color, stroke: color, fill: 'none', display: 'block' });
  
-function SearchBox({ className = '' }) {
-  return (
-    <div className={`relative flex items-center ${className}`}>
-      <span className="absolute left-4 pointer-events-none flex items-center">
-        <Search size={18} strokeWidth={2} style={iconStyle(INK)} />
-      </span>
-      <input
-        type="text"
-        placeholder="Search for products or brands"
-        style={{ color: INK }}
-        className="w-full bg-[#F0F3F5] text-[15px] placeholder-gray-500 rounded-md pl-11 pr-4 py-2.5 focus:outline-none focus:bg-white focus:ring-1 focus:ring-black border border-transparent transition-all"
-      />
-    </div>
-  );
-}
-
 type HeaderProps = {
   cartCount?: number;
   root?: AppLoaderData['root'];
@@ -90,7 +77,7 @@ export default function Header({
   }, []);
 
   return (
-    <header ref={headerRef} className="relative z-50 w-full font-sans" style={headerStyle}>
+    <header ref={headerRef} className="sticky top-0 z-50 w-full font-sans" style={headerStyle}>
       {/* 1. Announcement Bar */}
       <div
         className="text-[13px] md:text-[18px] py-3 px-4 lg:px-6 flex items-center justify-center relative w-full"
@@ -117,7 +104,9 @@ export default function Header({
           DRESSUP.GE
         </a>
  
-        <SearchBox className="hidden md:flex flex-1 max-w-3xl" />
+        <div className="hidden md:flex flex-1 max-w-5xl">
+          <SearchBar inputClassName={SEARCH_INPUT_CLASS_NAME} />
+        </div>
  
         <div className="flex items-center gap-5 lg:gap-8 flex-shrink-0">
           <CitySelector className="hidden md:flex" />
@@ -146,12 +135,12 @@ export default function Header({
       {/* Mobile search */}
       <div className="md:hidden px-4 pb-3 space-y-2">
         <CitySelector />
-        <SearchBox />
+        <SearchBar inputClassName={SEARCH_INPUT_CLASS_NAME} />
       </div>
  
       {/* 3. Sub Navigation */}
       <div
-        className="w-full px-4 md:px-8 lg:px-16"
+        className="w-full py-4 px-4 md:px-8 lg:px-16 text-[1ag8px]"
         style={{ borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}
       >
         <ResponsiveNavigationMenu

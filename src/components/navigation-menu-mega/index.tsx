@@ -445,6 +445,7 @@ export default function ResponsiveNavigationMenu({
     const getElementProps = useCallback(
         ({ level }: { level: number; category: ShopperProducts.schemas['Category']; isLeaf?: boolean }) => {
             const isSubcategory = level >= 1;
+            const isGroupHeading = categoryLabels && level === 1;
 
             // A top-level category that has a submenu renders as a disclosure trigger
             // (a button with aria-expanded). Activating it opens the submenu for both
@@ -455,13 +456,15 @@ export default function ResponsiveNavigationMenu({
             // through the panel's links and banner.
             return {
                 className: cn(
-                    'text-sm font-medium leading-5',
+                    'text-sm leading-5',
+                    isGroupHeading ? 'font-semibold' : 'font-normal',
+                    categoryLabels && isSubcategory && 'px-0 py-1',
                     isSubcategory &&
                         'hover:!bg-transparent focus:!bg-transparent hover:!text-header-menu-foreground/60 focus:!text-header-menu-foreground/60 transition-colors'
                 ),
             };
         },
-        []
+        [categoryLabels]
     );
 
     return (
@@ -558,8 +561,18 @@ export default function ResponsiveNavigationMenu({
                                     };
                                 }}
                                 propsList={({ parent, categories: subCategories, level }) => {
+                                    if (categoryLabels && level === 1) {
+                                        return {
+                                            className: 'grid grid-cols-2 gap-x-8 gap-y-5 p-0 md:grid-cols-4',
+                                        };
+                                    }
+                                    if (categoryLabels && level > 1) {
+                                        return {
+                                            className: 'mt-1 flex flex-col gap-1 p-0',
+                                        };
+                                    }
                                     if (level === 1) {
-                                        if (categoryLabels || isVertical(parent)) {
+                                        if (isVertical(parent)) {
                                             return {
                                                 style: defaultListStyle,
                                                 className: 'flex flex-col gap-0 p-0',
@@ -574,6 +587,9 @@ export default function ResponsiveNavigationMenu({
                                         };
                                     }
                                 }}
+                                propsListItem={({ level }) =>
+                                    categoryLabels && level >= 1 ? { className: 'min-w-0 list-none' } : undefined
+                                }
                                 propsElement={getElementProps}
                                 renderSlotListBefore={({ level, parent }) => {
                                     // The top-level trigger only opens the panel (it never
