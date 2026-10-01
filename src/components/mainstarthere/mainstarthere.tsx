@@ -1,104 +1,106 @@
-import React from 'react';
+/**
+ * Copyright 2026 Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-const saleItems = [
-  {
-    id: 1,
-    image: "/images/sub1.webp",
-    title: "Chelsea Boots on Sale",
-    description: "Save up to 15% on 2976 and Sinclair Chelsea styles. Ends Sunday. Restrictions apply.",
-    badge: "Chelsea Savings Event",
-    linkText: "See Restrictions"
-  },
-  {
-    id: 2,
-    image: "/images/sub2.webp",
-    title: "Platforms on Sale",
-    description: "Get up to 15% off select Jadon and Sinclair platform styles through Sunday.",
-    badge: "Platform Savings Event",
-    linkText: "See Restrictions"
-  },
-  {
-    id: 3,
-    image: "/images/sub3.webp",
-    title: "Kids' Boots on Sale",
-    description: "Save on 1460 and 2976 styles sized down for kids. While supplies last.",
-    badge: "Kids' Savings Event",
-    linkText: "See Restrictions"
-  },
-  {
-    id: 4,
-    image: "/images/sub4.webp",
-    title: "Men's Icons on Sale",
-    description: "Save up to 20% on 1460, 101 and Combs styles. Ends Sunday.",
-    badge: "Men's Savings Event",
-    linkText: "See Restrictions"
-  },
-  {
-    id: 5,
-    image: "/images/sub5.webp",
-    title: "Women's Best Sellers",
-    description: "Discover top-rated styles loved by everyone this season.",
-    badge: "Women's Event",
-    linkText: "See Restrictions"
-  },
-  {
-    id: 6,
-    image: "/images/sub6.webp",
-    title: "Accessories on Sale",
-    description: "Complete your look with bags, socks and care kits at special prices.",
-    badge: "Accessories Event",
-    linkText: "See Restrictions"
-  }
-];
+import { Suspense } from 'react';
+import { Await } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import type { ShopperSearch } from '@/scapi';
+import { Link } from '@/components/link';
+import { ProductTile, ProductTileProvider } from '@/components/product-tile';
+import { Skeleton } from '@/components/ui/skeleton';
+import DynamicImageProvider from '@/providers/dynamic-image';
 
-export default function MainStartHere() {
-  return (
-    <section className="w-full max-w-[1900px] mx-auto px-6 lg:px-12 py-12 bg-white font-sans select-none">
-      
-      {/* Section Header */}
-      <div className="mb-8">
-        <h2 className="text-xl lg:text-3xl font-bold text-gray-900 tracking-tight">
-          Up to 20% Off — Final Hours
-        </h2>
-      </div>
+/** One tile per column on desktop. */
+const FEATURED_COUNT = 6;
+const imageWidths = ['174px', '240px', '288px'];
+const dynamicImageProviderValue = { widths: imageWidths };
+const gridClassName = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6';
 
-      {/* Grid Layout (Desktop par aik line mein 6 cards) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
-        {saleItems.map((item) => (
-          <div
-            key={item.id}
-            className="flex flex-col group cursor-pointer"
-          >
-            {/* Card Image */}
-            <div className="w-full h-[280px] sm:h-[320px] lg:h-[360px] overflow-hidden rounded-lg bg-gray-100 mb-4">
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-              />
+interface MainStartHereProps {
+    /** Streamed products from the home loader (`fetchCarouselProducts`). */
+    searchResult?: Promise<ShopperSearch.schemas['ProductSearchResult']>;
+}
+
+function FeaturedSkeleton() {
+    return (
+        <div className={gridClassName} aria-hidden>
+            {Array.from({ length: FEATURED_COUNT }, (_, i) => (
+                <div key={i} className="space-y-3">
+                    <Skeleton className="aspect-[4/5] w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/3" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function FeaturedError() {
+    const { t } = useTranslation('home');
+    return (
+        <p role="alert" className="py-8 text-center text-muted-foreground">
+            {t('featuredProducts.loadFailed')}
+        </p>
+    );
+}
+
+/**
+ * First section under the hero: the first featured products from the catalog (price, image, link and
+ * delivery date come from `ProductTile`), replacing the former static promo cards.
+ */
+export default function MainStartHere({ searchResult }: MainStartHereProps) {
+    const { t } = useTranslation('home');
+    return (
+        <section
+            data-testid="featured-products"
+            className="w-full max-w-[1900px] mx-auto px-6 lg:px-12 py-12 bg-background font-sans">
+            <h2 className="mb-8 text-xl lg:text-3xl font-bold text-foreground tracking-tight">
+                {t('featuredProducts.title')}
+            </h2>
+            {searchResult && (
+                <Suspense fallback={<FeaturedSkeleton />}>
+                    <Await resolve={searchResult} errorElement={<FeaturedError />}>
+                        {(result) => (
+                            <ProductTileProvider>
+                                <DynamicImageProvider value={dynamicImageProviderValue}>
+                                    <div className={gridClassName}>
+                                        {(result.hits ?? []).slice(0, FEATURED_COUNT).map((product) => (
+                                            <div key={product.productId} className="min-w-0 flex">
+                                                <ProductTile
+                                                    product={product}
+                                                    imgAspectRatio={0.8}
+                                                    className="h-full w-full"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </DynamicImageProvider>
+                            </ProductTileProvider>
+                        )}
+                    </Await>
+                </Suspense>
+            )}
+            <div className="mt-8 flex justify-center">
+                <Link
+                    to="/category/root"
+                    data-testid="all-products-button"
+                    className="inline-flex items-center justify-center rounded-ui bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90">
+                    {t('featuredProducts.allProducts', { defaultValue: 'All Products' })}
+                </Link>
             </div>
-
-            {/* Title & Description */}
-            <h3 className="text-sm lg:text-xl font-bold text-gray-900 mb-1">
-              {item.title}
-            </h3>
-            <p className="text-xs text-gray-600 mb-3 line-clamp-3 leading-relaxed">
-              {item.description}
-            </p>
-
-            {/* Bottom Badge & Link */}
-            <div className="flex flex-col items-start gap-2 mt-auto pt-1">
-              <span className="px-5 py-2 bg-gray-900 text-white text-[14px] font-semibold rounded hover:bg-black transition-colors">
-                {item.badge}
-              </span>
-              <a href="#" className="text-[12px] font-medium text-gray-900 hover:underline text-center">
-                {item.linkText}
-              </a>
-            </div>
-          </div>
-        ))}
-      </div>
-
-    </section>
-  );
+        </section>
+    );
 }

@@ -15,14 +15,15 @@
  */
 import { redirect } from 'react-router';
 import type { Route } from './+types/_app._index';
-import { resolvePrefix } from '@salesforce/storefront-next-runtime/site-context';
+import { resolvePrefix, siteContext, type SiteContext } from '@salesforce/storefront-next-runtime/site-context';
 import { getConfig } from '@salesforce/storefront-next-runtime/config';
 import { SeoMeta } from '@/components/seo-meta';
 import { buildCanonicalUrl } from '@/utils/canonical-url';
+import { fetchCarouselProducts } from '@/components/product-carousel/loaders';
+import type { ShopperSearch } from '@/scapi';
 import { useTranslation } from 'react-i18next';
 import Header from '@/components/mainheader/mainheader';
 import HeroCarousel from '@/components/mainherocarousel/mainherocarousel';
-import TopPicksSlider from '@/components/maintoppicksslider/maintoppicksslider';
 import BagSection from '@/components/mainbagsection/mainbagsection';
 import StartsHere from '@/components/mainstarthere/mainstarthere';
 import NewAndNow from '@/components/mainnewandnow/mainnewandnow';
@@ -34,6 +35,8 @@ import Footer from '@/components/mainfooter/mainfooter';
 export { shouldRevalidate } from '@/lib/revalidation/routes/home';
 
 export type HomePageData = {
+    /** Featured products, streamed (non-critical: the page renders without waiting for them). */
+    searchResult: Promise<ShopperSearch.schemas['ProductSearchResult']>;
     pageUrl: string;
     ogImageUrl: string;
 };
@@ -56,8 +59,17 @@ export async function loader(args: Route.LoaderArgs): Promise<HomePageData> {
     }
 
     const pageUrl = buildCanonicalUrl(requestUrl.origin, requestUrl.pathname, requestUrl.search);
+    const currency = (args.context.get(siteContext) as SiteContext).currency;
+    const searchResult = fetchCarouselProducts(args.context, {
+        categoryId: 'root',
+        limit: config.pages.home.featuredProductsCount,
+        currency: currency ?? undefined,
+    });
+    // Observe a late failure so it cannot become an unhandled rejection if the page never renders.
+    void searchResult.catch(() => undefined);
 
     return {
+        searchResult,
         pageUrl,
         ogImageUrl: new URL('/images/hero.webp', requestUrl.origin).href,
     };
@@ -80,11 +92,10 @@ export default function HomePage({ loaderData }: { loaderData: HomePageData }) {
             />
             <Header />
             <HeroCarousel />
-            <StartsHere />
+            <StartsHere searchResult={loaderData.searchResult} />
             <NewAndNow />
             <Brands />
             <DressUp />
-            <TopPicksSlider />
             <BagSection />
             <Wordrobe />
             <Footer />

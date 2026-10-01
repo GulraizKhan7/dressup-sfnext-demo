@@ -1410,6 +1410,7 @@
         "featuredProducts": {
             "title": "Featured Products",
             "shopAll": "Shop all",
+            "allProducts": "All Products",
             "loadFailed": "Unable to load featured products."
         },
         "categoryGrid": {
