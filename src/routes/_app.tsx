@@ -90,6 +90,10 @@ export function loader({ context, request }: Route.LoaderArgs): LoaderData {
               })
             : Promise.resolve([]);
 
+    // These promises are returned to React Router for streaming. If a child loader fails first and the layout never
+    // renders, observe their eventual outcome so a later API failure cannot become an unhandled rejection.
+    void Promise.allSettled([rootCategoryPromise, subCategoriesPromise]);
+
     // Fetch header embedded component data (non-blocking, streamed to client, should be blocking once data is available from KVS to avoid layout shift)
     const headerComponentPromise = fetchComponentWithComponentData(
         { context, request, params: {} } as Route.LoaderArgs,

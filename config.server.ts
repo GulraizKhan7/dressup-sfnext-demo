@@ -147,20 +147,20 @@ export default defineConfig<Config>(
                 // Each site can have its own locale, currency, and detection settings
                 sites: [
                     {
-                            id: 'DressUp',
-                            defaultLocale: 'en-US',
-                            defaultCurrency: 'GEL',
-                            supportedLocales: [
-                                {
-                                    id: 'en-US',
-                                    preferredCurrency: 'USD',
-                                },
-                                {
-                                    id: 'ka-GE',
-                                    preferredCurrency: 'GEL',
-                                },
-                            ],
-                            supportedCurrencies: ['GEL', 'USD'],
+                        id: 'DressUp',
+                        defaultLocale: 'en-US',
+                        defaultCurrency: 'GEL',
+                        supportedLocales: [
+                            {
+                                id: 'en-US',
+                                preferredCurrency: 'USD',
+                            },
+                            {
+                                id: 'ka-GE',
+                                preferredCurrency: 'GEL',
+                            },
+                        ],
+                        supportedCurrencies: ['GEL', 'USD'],
                     },
                     {
                         id: 'RefArch',
@@ -194,7 +194,7 @@ export default defineConfig<Config>(
             // See CONFIG-OPTIONS.md#defaultSiteId for detailed documentation
             defaultSiteId: 'DressUp',
             siteAliasMap: {
-                DressUp: 'us'
+                DressUp: 'us',
             },
             // Hybrid mode configuration
             // See CONFIG-OPTIONS.md#hybrid for detailed documentation

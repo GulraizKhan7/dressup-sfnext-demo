@@ -2084,5 +2084,26 @@
         "sessionExpired": "Your session has expired. Please start over.",
         "cooldownActive": "Please wait {{seconds}} seconds before requesting a new code.",
         "codeResentHint": "Didn't receive the email? Check your spam folder or wait 15 minutes before requesting a new code."
+    },
+    "fulfillmentLocation": {
+        "deliverTo": "Deliver to",
+        "stock": "Stock",
+        "leadTime": "Lead time",
+        "leadTimeDays_one": "{{count}} day",
+        "leadTimeDays_other": "{{count}} days",
+        "distanceValue": "{{value}} {{unit}}",
+        "unavailable": "Unavailable",
+        "notAvailableIn": "Not available in {{city}}",
+        "exceedsStock": "Only {{stock}} available.",
+        "exceedsStockIn": "Only {{stock}} available in {{city}}",
+        "deliveryBy": "Delivery by {{date}}",
+        "deliveryByFrom": "Delivery by {{date}} from {{city}}",
+        "shipsFrom": "Ships from {{city}}",
+        "cartGroupHeading": "Delivery from {{city}} - {{itemCount}} out of {{totalCount}} items",
+        "deliveryGroupTitle": "Delivery {{number}} – from {{city}}",
+        "deliveriesTitle": "Deliveries",
+        "deliveryNumberFrom": "Delivery {{number}} of {{total}} – from {{city}}",
+        "arrives": "Arrives",
+        "trackingNumber": "Tracking number"
     }
 }
