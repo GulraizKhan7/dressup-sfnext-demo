@@ -1,5 +1,6 @@
 import React from 'react';
 import { Facebook, Instagram, Youtube, Linkedin, Disc as Tiktok } from 'lucide-react';
+import Switchers from '@/components/footer/switchers';
 
 export default function MainFooter() {
   return (
@@ -104,6 +105,11 @@ export default function MainFooter() {
 
           </div>
 
+        </div>
+
+        {/* Language and currency */}
+        <div className="mt-12 border-t border-gray-200 pt-8">
+          <Switchers />
         </div>
 
       </div>

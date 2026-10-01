@@ -60,6 +60,7 @@ vi.mock('@/components/mainfooter/mainfooter', () => ({ default: () => <div data-
 describe('HomePage', () => {
     test('renders the custom homepage sections, SEO metadata, and custom app chrome', () => {
         const loaderData: HomePageData = {
+            searchResult: Promise.resolve({ hits: [] }) as HomePageData['searchResult'],
             pageUrl: 'https://store.example/',
             ogImageUrl: 'https://store.example/images/hero.webp',
         };
@@ -73,7 +74,6 @@ describe('HomePage', () => {
             'new-and-now',
             'brands',
             'dress-up',
-            'top-picks',
             'bag-section',
             'wardrobe',
             'custom-footer',
@@ -82,6 +82,8 @@ describe('HomePage', () => {
         }
 
         expect(screen.getByTestId('seo-meta')).toHaveAttribute('data-page-url', loaderData.pageUrl);
+        // The featured products carousel (Top Picks) was replaced by the Featured Products section.
+        expect(screen.queryByTestId('top-picks')).not.toBeInTheDocument();
         expect(handle.customChrome).toBe(true);
     });
 });
