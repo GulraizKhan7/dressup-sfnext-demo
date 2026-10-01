@@ -74,7 +74,7 @@ const lines: ReturnableLine[] = [
     line({}),
     line({ lineKey: 'swim', sku: 'swim-1', name: 'Swim Trunks', categoryId: 'swimwear', variants: [] }),
     line({ lineKey: 'coat', sku: 'coat-1', name: 'Old Coat', deliveredAt: old, variants: [] }),
-    line({ lineKey: 'final', sku: 'final-sale-demo-sku', name: 'Final Sale Hat', deliveryId: 'd2' }),
+    line({ lineKey: 'final', sku: 'DU-879242-M', name: 'Final Sale Hat', deliveryId: 'd2' }),
 ];
 
 const renderForm = () => render(<ReturnForm orderNo="O1" lines={lines} now={NOW} />, { wrapper: AllProvidersWrapper });
@@ -190,6 +190,34 @@ describe('ReturnInProgressBadge', () => {
             'href',
             expect.stringContaining('/account/returns/RMA-')
         );
+    });
+});
+
+describe('ReturnInProgressBadge states', () => {
+    beforeEach(() => {
+        window.localStorage.clear();
+        resetReturnStoreForTests();
+        navigate.mockClear();
+    });
+
+    it('says Return in progress while open and the final status once finished', async () => {
+        const user = userEvent.setup();
+        const { unmount } = renderForm();
+        await user.click(screen.getByRole('checkbox', { name: /Cotton Shirt/ }));
+        await user.selectOptions(screen.getByLabelText('Reason'), 'defective');
+        await user.click(screen.getByTestId('return-submit'));
+        await waitFor(() => expect(navigate).toHaveBeenCalled());
+        unmount();
+
+        render(<ReturnInProgressBadge orderNo="O1" />, { wrapper: AllProvidersWrapper });
+        expect(await screen.findByText('Return in progress')).toBeInTheDocument();
+
+        const [saved] = await listReturns();
+        await act(async () => {
+            for (let i = 0; i < 3; i += 1) await advanceStatus(saved.rmaNo);
+        });
+        expect(await screen.findByText('Refunded')).toBeInTheDocument();
+        expect(screen.queryByText('Return in progress')).not.toBeInTheDocument();
     });
 });
 

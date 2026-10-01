@@ -33,6 +33,7 @@ import {
 } from '@/lib/order/status';
 import { routes, routeHref } from '@/route-paths';
 import { ReturnInProgressBadge, ReturnOrExchangeButton } from '@/components/returns';
+import { useOrderReturnStatus } from '@/hooks/use-returns';
 
 const BADGE_BASE_CLASSES = 'shrink-0 font-semibold border-0 py-1 w-fit';
 const ON_MUTED_CAPTION_CLASS = 'text-xs font-normal text-muted-foreground';
@@ -305,6 +306,11 @@ export function OrderListItem({
     const { currency: siteCurrency } = useSite();
 
     const productItems = order.productItems ?? [];
+    // Return status from this storefront's returns, used when Order Management has none.
+    const ownReturnStatus = useOrderReturnStatus(
+        order.orderNo,
+        productItems.reduce((sum, item) => sum + item.quantity, 0) || order.itemCount
+    );
     const visibleProducts = productItems.slice(0, maxThumbnails);
     const overflowCount = productItems.length - maxThumbnails;
 
@@ -360,7 +366,7 @@ export function OrderListItem({
                                 status={order.status}
                                 label={order.statusLabel}
                                 cancelStatus={order.cancelStatus}
-                                returnStatus={order.returnStatus}
+                                returnStatus={order.returnStatus ?? ownReturnStatus}
                             />
                         </div>
 

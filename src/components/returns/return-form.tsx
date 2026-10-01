@@ -307,7 +307,7 @@ function LineRow({
  * There are no effects, so nothing here can loop.
  */
 export function ReturnForm({ orderNo, lines, now }: ReturnFormProps): ReactElement {
-    const { t } = useTranslation('returns');
+    const { t, i18n } = useTranslation('returns');
     const navigate = useNavigate();
     const { ready, returns } = useReturns();
     const [drafts, setDrafts] = useState<Drafts>({});
@@ -315,6 +315,9 @@ export function ReturnForm({ orderNo, lines, now }: ReturnFormProps): ReactEleme
     const [submitFailed, setSubmitFailed] = useState(false);
     // A ref, not state: two fast clicks can both run before React re-renders, but they read the same ref.
     const submittingRef = useRef(false);
+    // Idempotency key of this submission. Kept across a retry so a lost reply cannot create two returns; dropped when the
+    // selection changes, because a different selection is a different request.
+    const requestIdRef = useRef<string | null>(null);
 
     const nowDate = useMemo(() => new Date(now), [now]);
     const groups = useMemo(() => groupLinesByDelivery(lines), [lines]);
@@ -332,6 +335,7 @@ export function ReturnForm({ orderNo, lines, now }: ReturnFormProps): ReactEleme
 
     const handleToggle = useCallback(
         (line: ReturnableLine, selected: boolean) => {
+            requestIdRef.current = null;
             setDrafts((previous) => {
                 if (!selected) {
                     return Object.fromEntries(Object.entries(previous).filter(([key]) => key !== line.lineKey));
@@ -355,6 +359,7 @@ export function ReturnForm({ orderNo, lines, now }: ReturnFormProps): ReactEleme
     );
 
     const handleChange = useCallback((lineKey: string, patch: Partial<LineDraft>) => {
+        requestIdRef.current = null;
         setDrafts((previous) => {
             const current = previous[lineKey];
             return current ? { ...previous, [lineKey]: { ...current, ...patch } } : previous;
@@ -376,7 +381,12 @@ export function ReturnForm({ orderNo, lines, now }: ReturnFormProps): ReactEleme
             const result = validateSelection(selection.items, lines, fresh, nowDate);
             if (!result.ok) throw new Error(result.error);
 
-            const request = await createReturn({ orderNo, items: selection.items });
+            requestIdRef.current ??= crypto.randomUUID();
+            const request = await createReturn({
+                orderNo,
+                items: selection.items,
+                clientRequestId: requestIdRef.current,
+            });
             await navigate(routeHref(routes.accountReturnDetail, { rmaNo: request.rmaNo }));
         } catch {
             submittingRef.current = false;
@@ -400,8 +410,17 @@ export function ReturnForm({ orderNo, lines, now }: ReturnFormProps): ReactEleme
                     <CardContent className="space-y-1 p-6">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                             <Typography variant="h3" as="h2" className="text-base font-semibold">
-                                {t('form.delivery', { index: index + 1 })}
+                                {group.lines[0]?.deliveryCity
+                                    ? t('form.deliveryFrom', { index: index + 1, city: group.lines[0].deliveryCity })
+                                    : t('form.delivery', { index: index + 1 })}
                             </Typography>
+                            {group.lines[0]?.deliveryCity && group.lines[0].deliveredAt && (
+                                <Typography variant="small" as="span" className="text-muted-foreground">
+                                    {t('form.deliveredOn', {
+                                        date: formatDate(group.lines[0].deliveredAt, i18n.language),
+                                    })}
+                                </Typography>
+                            )}
                         </div>
                         <ul className="divide-y divide-border">
                             {group.lines.map((line) => (

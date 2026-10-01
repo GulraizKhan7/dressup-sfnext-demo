@@ -18,21 +18,28 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@/components/link';
 import { Badge } from '@/components/ui/badge';
-import { useReturnForOrder } from '@/hooks/use-returns';
+import { useOrderReturns } from '@/hooks/use-returns';
+import { isFinalStatus } from '@/lib/returns/return-status';
 import { routes, routeHref } from '@/route-paths';
 
 /**
- * "Return in progress" badge linking to the tracking page. Renders nothing until the browser store has been read
- * (server and hydration render), so it never causes a hydration mismatch.
+ * Badge on an order that links to its return. It says "Return in progress" while a return is open, and the final
+ * status (Refunded, Exchange shipped) once it has finished. With several returns, an open one wins, else the latest.
+ * Renders nothing until the browser store has been read (server and hydration render), so it never causes a
+ * hydration mismatch.
  */
 export function ReturnInProgressBadge({ orderNo }: { orderNo: string }): ReactElement | null {
     const { t } = useTranslation('returns');
-    const { ready, request } = useReturnForOrder(orderNo);
+    const { ready, requests } = useOrderReturns(orderNo);
+    const request = requests.find((candidate) => !isFinalStatus(candidate)) ?? requests[requests.length - 1];
     if (!ready || !request) return null;
 
+    const finished = isFinalStatus(request);
     return (
-        <Badge asChild variant="info" data-testid="return-in-progress-badge">
-            <Link to={routeHref(routes.accountReturnDetail, { rmaNo: request.rmaNo })}>{t('actions.inProgress')}</Link>
+        <Badge asChild variant={finished ? 'outline' : 'info'} data-testid="return-in-progress-badge">
+            <Link to={routeHref(routes.accountReturnDetail, { rmaNo: request.rmaNo })}>
+                {finished ? t(`status.${request.status}`) : t('actions.inProgress')}
+            </Link>
         </Badge>
     );
 }

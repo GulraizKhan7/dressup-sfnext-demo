@@ -50,6 +50,7 @@ export function buildDeliveries<T extends DeliveryLineInput>(
             city: promise.city,
             leadTimeDays: promise.leadTimeDays,
             transitDays: promise.transitDays,
+            distanceKm: promise.distanceKm,
             deliveryDate: promise.deliveryDate,
             inStock: promise.inStock,
             maxAvailableUnits: promise.maxAvailableUnits,

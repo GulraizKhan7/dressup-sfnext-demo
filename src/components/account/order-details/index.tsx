@@ -62,6 +62,9 @@ import ShipmentShippingStatusBadge from '@/components/account/order-details/ship
 import OrderStatusHeader from '@/components/account/order-details/order-status-header';
 import PaymentMethodCard from '@/components/account/order-details/payment-method-card';
 import { ReturnInProgressBadge, ReturnOrExchangeButton } from '@/components/returns';
+import { OrderDeliveries } from '@/components/delivery-promise/order-deliveries';
+import { useOrderReturnStatus } from '@/hooks/use-returns';
+import { parseDeliverySplit } from '@/lib/delivery-promise';
 
 export type { ProductDataById };
 
@@ -497,6 +500,12 @@ export function OrderDetails({ order, productsById, omsMetaData }: OrderDetailsP
     const shipments = order.shipments ?? [];
     const productItems = order.productItems ?? [];
     const itemsByShipmentId = groupProductItemsByShipmentId(productItems);
+    const ownReturnStatus = useOrderReturnStatus(
+        order.orderNo,
+        productItems.reduce((sum, item) => sum + (item.quantity ?? 1), 0)
+    );
+    // Deliveries as promised at checkout. `parseDeliverySplit` returns null for orders placed before it was saved.
+    const deliverySplit = parseDeliverySplit((order as { c_deliverySplit?: unknown }).c_deliverySplit);
     const paymentMethodDisplays = getPaymentMethodDisplays(order, t);
     // Whether the order has a card to show in the tracking section. Gate on the SAME
     // predicate OrderTracking uses to render a card (hasVisibleTrackingCard), not the
@@ -532,7 +541,11 @@ export function OrderDetails({ order, productsById, omsMetaData }: OrderDetailsP
                     </div>
 
                     {/* Order Details header */}
-                    <OrderStatusHeader order={order} headingRef={orderDetailsHeadingRef} />
+                    <OrderStatusHeader
+                        order={order}
+                        headingRef={orderDetailsHeadingRef}
+                        returnStatusFallback={ownReturnStatus}
+                    />
 
                     {/* Order-level action bar (return / cancel / track shipment / support). Sits
                         directly under the header — matching the order-management design (PR #1911) —
@@ -654,6 +667,27 @@ export function OrderDetails({ order, productsById, omsMetaData }: OrderDetailsP
                     {/* Items Ordered and Order Summary */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-4">
+                            {deliverySplit && (
+                                <OrderDeliveries
+                                    orderNo={order.orderNo ?? ''}
+                                    split={deliverySplit}
+                                    items={productItems.flatMap((item) =>
+                                        item.itemId && item.productId
+                                            ? [
+                                                  {
+                                                      itemId: item.itemId,
+                                                      productId: item.productId,
+                                                      productName:
+                                                          productsById[item.productId]?.name ??
+                                                          item.productName ??
+                                                          item.productId,
+                                                      quantity: item.quantity ?? 1,
+                                                  },
+                                              ]
+                                            : []
+                                    )}
+                                />
+                            )}
                             <h2 className="text-lg font-semibold">{t('orders.itemsOrdered')}</h2>
                             <Card className="p-0 overflow-visible">
                                 <CardContent className="p-0">

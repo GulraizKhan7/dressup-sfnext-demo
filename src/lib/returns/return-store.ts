@@ -14,30 +14,45 @@
  * limitations under the License.
  */
 
+import { resourceRoutes } from '@/route-paths';
+import { advanceStatusRecord, getFinalStatus, getMockTrackingNo, getStatusSteps, isFinalStatus } from './return-status';
 import type { CreateReturnInput, ReturnRequest, ReturnStatus } from './types';
 
+export { getFinalStatus, getMockTrackingNo, getStatusSteps, isFinalStatus };
+
 /**
- * The only module that saves return data. Today it is backed by `localStorage`; when real persistence is added
- * only this file is replaced. Every method is async so callers never depend on the storage being synchronous.
+ * The only module screens use to read and save returns. It has two backends behind one API:
+ *
+ * - `api`: returns live on the order (custom attribute `c_returns`) and are read and written through the storefront's
+ *   resource routes, which call the Returns custom API. Visible on every device and in Business Manager.
+ * - `browser`: returns live in this browser's `localStorage`. Used while the custom API is not deployed
+ *   (`features.returnsCustomApi` is off), and by local development.
+ *
+ * The backend is chosen by the hook from configuration; callers never see the difference. Every method is async, so
+ * the screens did not change when the second backend was added.
  *
  * Concurrency
- * - Every mutation is one synchronous read-modify-write block. JavaScript cannot interleave two calls inside
- *   it, so two clicks in one tab can never overwrite each other.
- * - Each mutation re-reads storage first, so a change made in another tab is never lost.
+ * - Browser backend: every mutation is one synchronous read-modify-write block. JavaScript cannot interleave two
+ *   calls inside it, so two clicks in one tab never overwrite each other. Each mutation re-reads storage first, so a
+ *   change made in another tab is not lost.
+ * - API backend: the server re-reads the order inside a transaction, rechecks quantities, and treats a repeated
+ *   `clientRequestId` as the same request. Replies are merged by "longest history wins", so a slow, stale reply can
+ *   never overwrite a newer status.
  * - `advanceStatus` takes the status the caller saw; a stale double click becomes a no-op instead of skipping a step.
- * - `createReturn` enforces the per-line quantity cap against what is stored, not against what the form saw.
  *
  * React
  * - {@link subscribeToReturns} / {@link getReturnsSnapshot} / {@link getReturnsServerSnapshot} are shaped for
- *   `useSyncExternalStore`. The snapshot object only changes when the stored data changes, and the server snapshot is
- *   one frozen constant, so React never sees a "new" value on an unchanged store (no render loop) and the first
- *   client render matches the server HTML.
+ *   `useSyncExternalStore`. The snapshot object only changes when the data changes, and the server snapshot is one
+ *   frozen constant, so React never sees a "new" value on an unchanged store (no render loop) and the first client
+ *   render matches the server HTML.
  */
+
+export type ReturnsBackend = 'api' | 'browser';
 
 export const RETURNS_STORAGE_KEY = 'returns:v1';
 
 export interface ReturnsSnapshot {
-    /** False on the server and during hydration, true once the browser store has been read. */
+    /** False on the server, during hydration and until the first load finishes. */
     ready: boolean;
     returns: readonly ReturnRequest[];
 }
@@ -48,8 +63,9 @@ const SERVER_SNAPSHOT: ReturnsSnapshot = Object.freeze({
 });
 
 const RMA_ATTEMPTS = 10;
-const STEPS_BEFORE_FINAL: readonly ReturnStatus[] = ['submitted', 'approved', 'received'];
 
+/** Backend used by the mutating functions. Set by the first subscriber; `browser` until then. */
+let activeBackend: ReturnsBackend = 'browser';
 let snapshot: ReturnsSnapshot | null = null;
 let lastRaw: string | null = null;
 /** Used only when `localStorage` is unavailable (private mode, blocked storage), so the demo still works in-session. */
@@ -58,8 +74,13 @@ let storageUnavailable = false;
 const listeners = new Set<() => void>();
 let storageListenerAttached = false;
 
+/** API backend state. */
+let apiSnapshot: ReturnsSnapshot | null = null;
+let apiLoad: Promise<void> | null = null;
+let apiLoadFailed = false;
+
 // ---------------------------------------------------------------------------------------------------------------
-// Storage access. Every call is guarded: storage can throw or be absent.
+// Browser backend: storage access. Every call is guarded: storage can throw or be absent.
 // ---------------------------------------------------------------------------------------------------------------
 
 function readRaw(): string | null {
@@ -105,10 +126,6 @@ function parse(raw: string | null): ReturnRequest[] {
     }
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// Snapshot handling
-// ---------------------------------------------------------------------------------------------------------------
-
 /** Re-reads storage and replaces the snapshot only if the stored text changed. Returns true when it changed. */
 function refresh(): boolean {
     const raw = readRaw();
@@ -123,25 +140,136 @@ function notify(): void {
 }
 
 function handleStorageEvent(event: StorageEvent): void {
+    if (activeBackend !== 'browser') return;
     // `key === null` means the whole storage was cleared.
     if (event.key !== null && event.key !== RETURNS_STORAGE_KEY) return;
     if (refresh()) notify();
 }
 
-/** Writes the new list, then publishes it. Called only from inside a mutation block. */
+/** Writes the new list, then publishes it. Called only from inside a browser-backend mutation. */
 function commit(next: ReturnRequest[]): void {
-    const raw = JSON.stringify(next);
-    writeRaw(raw);
+    writeRaw(JSON.stringify(next));
     refresh();
     notify();
 }
 
-export function subscribeToReturns(listener: () => void): () => void {
+// ---------------------------------------------------------------------------------------------------------------
+// API backend
+// ---------------------------------------------------------------------------------------------------------------
+
+interface ListResponse {
+    returns: ReturnRequest[];
+}
+
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+    const response = await fetch(url, { credentials: 'same-origin', ...init });
+    if (!response.ok) throw new Error(`Returns request failed with status ${response.status}`);
+    return (await response.json()) as T;
+}
+
+/** The returns for two replies of the same request: the one with the longer history is the newer. */
+function newer(a: ReturnRequest, b: ReturnRequest): ReturnRequest {
+    return b.history.length > a.history.length ? b : a;
+}
+
+function publishApi(returns: readonly ReturnRequest[], ready: boolean): void {
+    const previous = apiSnapshot;
+    if (previous && previous.ready === ready && JSON.stringify(previous.returns) === JSON.stringify(returns)) return;
+    apiSnapshot = Object.freeze({ ready, returns: Object.freeze([...returns]) });
+    notify();
+}
+
+/** Loads the shopper's returns from the server. One load at a time; a second caller shares the first. */
+function loadApi(): Promise<void> {
+    if (apiLoad) return apiLoad;
+    apiLoad = requestJson<ListResponse>(resourceRoutes.returns, { headers: { Accept: 'application/json' } })
+        .then(({ returns }) => {
+            apiLoadFailed = false;
+            // A mutation that finished while this load was in flight may be newer than the loaded copy: keep the newer.
+            const merged = new Map(returns.map((request) => [request.rmaNo, request]));
+            for (const local of apiSnapshot?.returns ?? []) {
+                const loaded = merged.get(local.rmaNo);
+                merged.set(local.rmaNo, loaded ? newer(loaded, local) : local);
+            }
+            publishApi([...merged.values()], true);
+        })
+        .catch(() => {
+            // Show an empty list rather than a skeleton forever; the next subscriber tries again.
+            apiLoadFailed = true;
+            publishApi(apiSnapshot?.returns ?? [], true);
+        })
+        .finally(() => {
+            apiLoad = null;
+        });
+    return apiLoad;
+}
+
+function mergeApiReturn(request: ReturnRequest): void {
+    const current = apiSnapshot?.returns ?? [];
+    const existing = current.find((candidate) => candidate.rmaNo === request.rmaNo);
+    const next = existing
+        ? current.map((candidate) => (candidate.rmaNo === request.rmaNo ? newer(existing, request) : candidate))
+        : [...current, request];
+    publishApi(next, true);
+}
+
+function newClientRequestId(): string {
+    return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+async function createReturnApi(input: CreateReturnInput): Promise<ReturnRequest> {
+    if (input.items.length === 0) throw new Error('A return needs at least one item.');
+    const { return: stored } = await requestJson<{ return: ReturnRequest }>(resourceRoutes.returnCreate, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+            orderNo: input.orderNo,
+            clientRequestId: input.clientRequestId ?? newClientRequestId(),
+            items: input.items,
+        }),
+    });
+    // The server knows only what is saved on the order; keep the names and images the shopper just saw.
+    const request: ReturnRequest = {
+        ...stored,
+        items: stored.items.map((item) => {
+            const sent = input.items.find((candidate) => candidate.lineKey === item.lineKey);
+            return sent ? { ...item, name: sent.name, imageUrl: sent.imageUrl, sku: sent.sku } : item;
+        }),
+    };
+    mergeApiReturn(request);
+    return request;
+}
+
+async function advanceStatusApi(rmaNo: string, expectedStatus?: ReturnStatus): Promise<ReturnRequest | undefined> {
+    const current = apiSnapshot?.returns.find((request) => request.rmaNo === rmaNo);
+    if (!current) return undefined;
+    const { return: updated } = await requestJson<{ return: ReturnRequest }>(resourceRoutes.returnAdvance, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ orderNo: current.orderNo, rmaNo, expectedStatus }),
+    });
+    const merged: ReturnRequest = { ...updated, items: current.items };
+    mergeApiReturn(merged);
+    return apiSnapshot?.returns.find((request) => request.rmaNo === rmaNo) ?? merged;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Subscription (shared)
+// ---------------------------------------------------------------------------------------------------------------
+
+export function subscribeToReturns(listener: () => void, backend: ReturnsBackend = 'browser'): () => void {
+    activeBackend = backend;
     listeners.add(listener);
-    if (!storageListenerAttached && typeof window !== 'undefined') {
+
+    if (backend === 'browser' && !storageListenerAttached && typeof window !== 'undefined') {
         window.addEventListener('storage', handleStorageEvent);
         storageListenerAttached = true;
     }
+    // First subscriber (or a retry after a failed load) starts loading from the server.
+    if (backend === 'api' && typeof window !== 'undefined' && (!apiSnapshot || apiLoadFailed)) void loadApi();
+
     return () => {
         listeners.delete(listener);
         if (listeners.size === 0 && storageListenerAttached) {
@@ -151,8 +279,9 @@ export function subscribeToReturns(listener: () => void): () => void {
     };
 }
 
-export function getReturnsSnapshot(): ReturnsSnapshot {
+export function getReturnsSnapshot(backend: ReturnsBackend = 'browser'): ReturnsSnapshot {
     if (typeof window === 'undefined') return SERVER_SNAPSHOT;
+    if (backend === 'api') return apiSnapshot ?? SERVER_SNAPSHOT;
     // Also picks up a write from another tab whose `storage` event has not reached us yet.
     refresh();
     return snapshot ?? SERVER_SNAPSHOT;
@@ -163,7 +292,7 @@ export function getReturnsServerSnapshot(): ReturnsSnapshot {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Mock data generation
+// Mock data generation (browser backend; the API backend generates these on the server)
 // ---------------------------------------------------------------------------------------------------------------
 
 function randomDigits(length: number): string {
@@ -186,29 +315,8 @@ function generateRmaNo(existing: readonly ReturnRequest[]): string {
     return `RMA-${Date.now()}`;
 }
 
-/** Derived from the RMA number, so advancing twice can never produce two different tracking numbers. */
-export function getMockTrackingNo(rmaNo: string): string {
-    let hash = 0;
-    for (let i = 0; i < rmaNo.length; i += 1) hash = (hash * 31 + rmaNo.charCodeAt(i)) >>> 0;
-    return `1Z${String(hash).padStart(10, '0').slice(-10)}DEMO`;
-}
-
-/** Status the request ends in. Any exchange line means the final step is "Exchange shipped". */
-export function getFinalStatus(request: Pick<ReturnRequest, 'items'>): ReturnStatus {
-    return request.items.some((item) => item.action === 'exchange') ? 'exchange_shipped' : 'refunded';
-}
-
-/** Ordered steps for a request, used by the timeline. */
-export function getStatusSteps(request: Pick<ReturnRequest, 'items'>): ReturnStatus[] {
-    return [...STEPS_BEFORE_FINAL, getFinalStatus(request)];
-}
-
-export function isFinalStatus(request: Pick<ReturnRequest, 'items' | 'status'>): boolean {
-    return request.status === getFinalStatus(request);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
-// Public API (async so a real backend can replace this module without touching callers)
+// Public API (async so a backend can replace this module's internals without touching callers)
 // ---------------------------------------------------------------------------------------------------------------
 
 /**
@@ -226,6 +334,7 @@ function runNow<T>(work: () => T): Promise<T> {
 }
 
 function readAll(): readonly ReturnRequest[] {
+    if (activeBackend === 'api') return apiSnapshot?.returns ?? [];
     refresh();
     return snapshot?.returns ?? [];
 }
@@ -246,14 +355,21 @@ export function getReturnForOrder(orderNo: string): Promise<ReturnRequest | unde
 }
 
 export function createReturn(input: CreateReturnInput): Promise<ReturnRequest> {
-    return runNow(() => createReturnNow(input));
+    return activeBackend === 'api' ? createReturnApi(input) : runNow(() => createReturnBrowser(input));
 }
 
-function createReturnNow(input: CreateReturnInput): ReturnRequest {
+function createReturnBrowser(input: CreateReturnInput): ReturnRequest {
+    // No `await` before the write below: read, check and write happen in one uninterruptible block.
     refresh();
     const existing = [...(snapshot?.returns ?? [])];
 
     if (input.items.length === 0) throw new Error('A return needs at least one item.');
+
+    // The same submission sent twice (a retry, a double click) returns the first request.
+    if (input.clientRequestId) {
+        const duplicate = existing.find((request) => request.clientRequestId === input.clientRequestId);
+        if (duplicate) return duplicate;
+    }
 
     const requested = new Map<string, number>();
     for (const request of existing) {
@@ -276,6 +392,7 @@ function createReturnNow(input: CreateReturnInput): ReturnRequest {
         status: 'submitted',
         history: [{ status: 'submitted', at }],
         items: input.items.map((item) => ({ ...item })),
+        ...(input.clientRequestId ? { clientRequestId: input.clientRequestId } : {}),
     };
     commit([...existing, request]);
     return request;
@@ -284,32 +401,24 @@ function createReturnNow(input: CreateReturnInput): ReturnRequest {
 /**
  * Moves a request one step forward.
  * @param expectedStatus The status the caller was looking at. If the stored status differs (a double click, or another
- * tab already advanced it), nothing changes and the current request is returned, so a step is never skipped.
+ * tab or device already advanced it), nothing changes and the current request is returned, so a step is never skipped.
  */
 export function advanceStatus(rmaNo: string, expectedStatus?: ReturnStatus): Promise<ReturnRequest | undefined> {
-    return runNow(() => advanceStatusNow(rmaNo, expectedStatus));
+    return activeBackend === 'api'
+        ? advanceStatusApi(rmaNo, expectedStatus)
+        : runNow(() => advanceStatusBrowser(rmaNo, expectedStatus));
 }
 
-function advanceStatusNow(rmaNo: string, expectedStatus?: ReturnStatus): ReturnRequest | undefined {
+function advanceStatusBrowser(rmaNo: string, expectedStatus?: ReturnStatus): ReturnRequest | undefined {
     refresh();
     const existing = [...(snapshot?.returns ?? [])];
     const index = existing.findIndex((request) => request.rmaNo === rmaNo);
     if (index === -1) return undefined;
 
     const current = existing[index];
-    if (expectedStatus && current.status !== expectedStatus) return current;
-    if (isFinalStatus(current)) return current;
+    const updated = advanceStatusRecord(current, expectedStatus, new Date().toISOString());
+    if (updated === current) return current;
 
-    const steps = getStatusSteps(current);
-    const nextStatus = steps[steps.indexOf(current.status) + 1];
-    if (!nextStatus) return current;
-
-    const updated: ReturnRequest = {
-        ...current,
-        status: nextStatus,
-        history: [...current.history, { status: nextStatus, at: new Date().toISOString() }],
-        ...(nextStatus === 'exchange_shipped' ? { trackingNo: getMockTrackingNo(current.rmaNo) } : {}),
-    };
     existing[index] = updated;
     commit(existing);
     return updated;
@@ -321,4 +430,8 @@ export function resetReturnStoreForTests(): void {
     lastRaw = null;
     memoryRaw = null;
     storageUnavailable = false;
+    activeBackend = 'browser';
+    apiSnapshot = null;
+    apiLoad = null;
+    apiLoadFailed = false;
 }

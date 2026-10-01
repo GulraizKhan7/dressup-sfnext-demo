@@ -101,6 +101,29 @@ describe('getItemEligibility', () => {
     });
 });
 
+describe('date-only delivery dates (saved delivery split)', () => {
+    const at = (iso: string) => new Date(iso);
+    const onDate = (deliveryDate: string) => line({ deliveredAt: deliveryDate });
+
+    it('keeps the window open through the whole 30th day', () => {
+        expect(getItemEligibility(onDate('2026-06-01'), at('2026-07-01T23:59:00Z'), policy).status).toBe('eligible');
+        expect(getItemEligibility(onDate('2026-06-01'), at('2026-07-02T00:01:00Z'), policy).status).toBe(
+            'window-closed'
+        );
+    });
+
+    it('reports the last day in the reason', () => {
+        const result = getItemEligibility(onDate('2026-06-01'), at('2026-06-10T00:00:00Z'), policy);
+        expect(result.reason.values?.date?.slice(0, 10)).toBe('2026-07-01');
+    });
+
+    it('treats an impossible date as having no delivery date', () => {
+        expect(getItemEligibility(onDate('2026-13-45'), NOW, policy).reason.key).toBe(
+            'eligibility.reason.noDeliveryDate'
+        );
+    });
+});
+
 describe('groupLinesByDelivery', () => {
     it('groups by delivery and keeps first-seen order', () => {
         const groups = groupLinesByDelivery([

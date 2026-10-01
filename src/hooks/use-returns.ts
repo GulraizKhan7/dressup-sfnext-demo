@@ -13,14 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useConfig } from '@salesforce/storefront-next-runtime/config';
 import {
     getReturnsServerSnapshot,
     getReturnsSnapshot,
     isFinalStatus,
     subscribeToReturns,
+    type ReturnsBackend,
     type ReturnsSnapshot,
 } from '@/lib/returns/return-store';
+import type { OrderReturnStatusType } from '@/lib/order/status';
+import { getOrderReturnStatusFromReturns } from '@/lib/returns/order-return-status';
 import type { ReturnRequest } from '@/lib/returns/types';
 
 /**
@@ -28,7 +32,12 @@ import type { ReturnRequest } from '@/lib/returns/types';
  * server HTML; callers render nothing (badge) or a skeleton (tracking page) until it turns true.
  */
 export function useReturns(): ReturnsSnapshot {
-    return useSyncExternalStore(subscribeToReturns, getReturnsSnapshot, getReturnsServerSnapshot);
+    // Returns live on the order when the Returns custom API is deployed, otherwise in this browser.
+    const backend: ReturnsBackend = useConfig().features?.returnsCustomApi ? 'api' : 'browser';
+    // Both callbacks only change when the backend does, so React keeps one subscription and never re-subscribes in a loop.
+    const subscribe = useCallback((listener: () => void) => subscribeToReturns(listener, backend), [backend]);
+    const getSnapshot = useCallback(() => getReturnsSnapshot(backend), [backend]);
+    return useSyncExternalStore(subscribe, getSnapshot, getReturnsServerSnapshot);
 }
 
 export function useReturnForOrder(orderNo: string | undefined): { ready: boolean; request: ReturnRequest | undefined } {
@@ -59,5 +68,29 @@ export function useReturnInProgress(orderNo: string | undefined): { ready: boole
             inProgress: returns.some((request) => request.orderNo === orderNo && !isFinalStatus(request)),
         }),
         [ready, returns, orderNo]
+    );
+}
+
+/** All returns of an order, oldest first. */
+export function useOrderReturns(orderNo: string | undefined): { ready: boolean; requests: readonly ReturnRequest[] } {
+    const { ready, returns } = useReturns();
+    return useMemo(
+        () => ({ ready, requests: returns.filter((request) => request.orderNo === orderNo) }),
+        [ready, returns, orderNo]
+    );
+}
+
+/**
+ * The order-level return status for the order badge, from this order's saved returns. `undefined` while the store is
+ * loading and for orders without returns, so the normal order status shows.
+ */
+export function useOrderReturnStatus(
+    orderNo: string | undefined,
+    orderUnits: number
+): OrderReturnStatusType | undefined {
+    const { ready, requests } = useOrderReturns(orderNo);
+    return useMemo(
+        () => (ready ? getOrderReturnStatusFromReturns(requests, orderUnits) : undefined),
+        [ready, requests, orderUnits]
     );
 }

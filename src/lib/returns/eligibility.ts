@@ -15,7 +15,13 @@
  */
 
 import defaultPolicy from './return-policy.json';
-import type { ItemEligibilityStatus, ReturnAction, ReturnItem, ReturnableLine } from './types';
+import {
+    RETURN_REASONS,
+    type ItemEligibilityStatus,
+    type ReturnAction,
+    type ReturnItem,
+    type ReturnableLine,
+} from './types';
 
 /**
  * The only place that knows the return rules. Every screen asks this module; no screen repeats a rule.
@@ -59,9 +65,19 @@ const NO_ACTIONS: readonly ReturnAction[] = Object.freeze([]);
 const BOTH_ACTIONS: readonly ReturnAction[] = Object.freeze(['return', 'exchange'] as ReturnAction[]);
 const EXCHANGE_ONLY: readonly ReturnAction[] = Object.freeze(['exchange'] as ReturnAction[]);
 
-/** Last instant a return is accepted, or `null` when the delivery date is missing or unparseable. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Last instant a return is accepted, or `null` when the delivery date is missing or unparseable.
+ * A full timestamp is counted from that moment. A date-only value (a saved delivery date) is counted in whole days, so
+ * the window stays open through the whole last day.
+ */
 export function getWindowEnd(deliveredAt: string | undefined, policy: ReturnPolicy = RETURN_POLICY): Date | null {
     if (!deliveredAt) return null;
+    if (DATE_ONLY.test(deliveredAt)) {
+        const start = Date.parse(`${deliveredAt}T00:00:00Z`);
+        return Number.isNaN(start) ? null : new Date(start + (policy.defaultWindowDays + 1) * DAY_MS - 1);
+    }
     const delivered = new Date(deliveredAt);
     if (Number.isNaN(delivered.getTime())) return null;
     return new Date(delivered.getTime() + policy.defaultWindowDays * DAY_MS);
@@ -185,7 +201,9 @@ export function validateSelection(
         if (!getItemEligibility(line, now, policy).allowedActions.includes(item.action)) {
             return { ok: false, error: 'action-not-allowed', lineKey: line.lineKey };
         }
-        if (!item.reason) return { ok: false, error: 'missing-reason', lineKey: line.lineKey };
+        if (!RETURN_REASONS.some((reason) => reason.id === item.reason)) {
+            return { ok: false, error: 'missing-reason', lineKey: line.lineKey };
+        }
 
         if (item.action === 'exchange') {
             const replacement = line.variants.find((variant) => variant.sku === item.replacementSku);

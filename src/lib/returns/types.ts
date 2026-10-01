@@ -64,7 +64,9 @@ export interface ReturnableLine {
     categoryId?: string;
     /** Shipment the line belongs to; lines sharing it are shown as one delivery. */
     deliveryId: string;
-    /** ISO timestamp the window is measured from. */
+    /** City the delivery ships from. Set only when the delivery comes from the order's saved split. */
+    deliveryCity?: string;
+    /** What the 30-day window is measured from: an ISO timestamp, or a `YYYY-MM-DD` delivery date. */
     deliveredAt?: string;
     variationValues: Record<string, string>;
     variationAttributes: VariationAttributeOption[];
@@ -100,6 +102,8 @@ export interface ReturnRequest {
     items: ReturnItem[];
     /** Set once the status reaches `exchange_shipped`. */
     trackingNo?: string;
+    /** Idempotency key of the submission that created this request. */
+    clientRequestId?: string;
 }
 
-export type CreateReturnInput = Pick<ReturnRequest, 'orderNo' | 'items'>;
+export type CreateReturnInput = Pick<ReturnRequest, 'orderNo' | 'items' | 'clientRequestId'>;

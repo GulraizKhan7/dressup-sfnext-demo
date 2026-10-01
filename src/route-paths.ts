@@ -172,6 +172,9 @@ export const resourceRoutes = {
     recommendations: '/resource/recommendations',
     basketProducts: '/resource/basket-products',
     reviewsSummary: '/resource/reviews-summary',
+    returns: '/resource/returns',
+    returnCreate: '/action/return-create',
+    returnAdvance: '/action/return-advance',
     // @sfdc-extension-line SFDC_EXT_SHIPPING_DELIVERY
     shippingDestination: '/resource/shipping-destination',
     categoryProducts: '/resource/category-products',

@@ -16,6 +16,7 @@
 
 import type { ShopperOrders, ShopperProducts } from '@/scapi';
 import { findImageGroupBy } from '@/lib/product/image-groups-utils';
+import { findDeliveryForItem, parseDeliverySplit } from '@/lib/delivery-promise';
 import type { ReturnableLine } from './types';
 
 type Order = ShopperOrders.schemas['Order'];
@@ -25,8 +26,10 @@ type Product = ShopperProducts.schemas['Product'];
  * Turns a SCAPI order plus its product data into the plain lines the return screens use. Pure, so it is unit-testable
  * and the loader stays a thin fetch.
  *
- * Demo assumption: SCAPI does not tie a delivery date to a single shipment, so every line uses the latest OMS
- * `actualDeliveryDate` on the order, and falls back to the order creation date when there is none.
+ * Deliveries and the return window come from the split saved on the order at checkout (`c_deliverySplit`): a line is
+ * grouped under its delivery, and its 30-day window starts on that delivery's date. For orders placed before the split
+ * was saved, lines keep the old behaviour: grouped by SFCC shipment, window counted from the latest OMS
+ * `actualDeliveryDate`, or from the order creation date when there is none.
  */
 
 /** Master product ids the exchange picker needs, so the loader can fetch their variants in one call. */
@@ -56,6 +59,7 @@ export function buildReturnableLines(
     mastersById: Record<string, Product | undefined>
 ): ReturnableLine[] {
     const deliveredAt = getOrderDeliveredAt(order);
+    const split = parseDeliverySplit((order as { c_deliverySplit?: unknown }).c_deliverySplit);
 
     return (order.productItems ?? []).flatMap((item, index): ReturnableLine[] => {
         // A line without a product id cannot be matched to a SKU rule, so it is left out rather than guessed at.
@@ -65,16 +69,21 @@ export function buildReturnableLines(
         const master = product?.master?.masterId ? mastersById[product.master.masterId] : undefined;
         const image = findImageGroupBy(product?.imageGroups, { viewType: 'small' })?.images?.[0];
 
+        const lineKey = item.itemId ?? `${item.productId}-${index}`;
+        // A line the split does not mention (no hub data, or a bonus item) falls back to the order-level values.
+        const delivery = item.itemId ? findDeliveryForItem(split, item.itemId) : undefined;
+
         return [
             {
-                lineKey: item.itemId ?? `${item.productId}-${index}`,
+                lineKey,
                 sku: item.productId,
                 name: (product?.name ?? item.productName)?.trim() || item.productId,
                 imageUrl: image?.disBaseLink ?? image?.link,
                 quantity: item.quantity ?? 1,
                 categoryId: product?.primaryCategoryId ?? master?.primaryCategoryId,
-                deliveryId: item.shipmentId ?? 'default',
-                deliveredAt,
+                deliveryId: delivery?.id ?? item.shipmentId ?? 'default',
+                deliveryCity: delivery?.city,
+                deliveredAt: delivery?.deliveryDate ?? deliveredAt,
                 variationValues: { ...(product?.variationValues ?? {}) } as Record<string, string>,
                 variationAttributes: (master?.variationAttributes ?? []).map((attribute) => ({
                     id: attribute.id,

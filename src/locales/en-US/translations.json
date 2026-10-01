@@ -2095,7 +2095,8 @@
             "title": "Return or exchange items",
             "subtitle": "Order #{{orderNo}}. Select the items you want to send back or swap.",
             "delivery": "Delivery {{index}}",
-            "deliveredOn": "Delivered {{date}}",
+            "deliveryFrom": "Delivery {{index}} – from {{city}}",
+            "deliveredOn": "Delivery date: {{date}}",
             "selectItem": "Select {{name}}",
             "quantity": "Quantity",
             "action": "What would you like to do?",
@@ -2160,7 +2161,7 @@
             "trackingNumber": "Tracking number",
             "advance": "Advance status",
             "notFoundTitle": "We can't find this return",
-            "notFoundDescription": "Returns are saved in this browser only. Open the request on the device where you submitted it.",
+            "notFoundDescription": "Check the link, or open the return from your order history.",
             "backToOrders": "Back to order history",
             "viewOrder": "View order"
         }
