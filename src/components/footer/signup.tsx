@@ -50,7 +50,7 @@ export default function Signup({ inline = false }: { inline?: boolean }): ReactE
                 <div className="flex flex-row items-center gap-2 sm:gap-3">
                     <label
                         htmlFor="footer-newsletter-email"
-                        className={inline ? 'hidden shrink-0 text-sm font-semibold sm:block' : 'sr-only'}>
+                        className={inline ? 'hidden shrink-0 text-base font-semibold sm:block' : 'sr-only'}>
                         {inline ? t('newsletter.inlineLabel') : t('newsletter.emailLabel')}
                     </label>
                     <Input

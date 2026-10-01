@@ -30,7 +30,7 @@ import NewAndNow from '@/components/mainnewandnow/mainnewandnow';
 import Brands from '@/components/mainbrands/mainbrands';
 import DressUp from '@/components/maindressup/maindressup';
 import Wordrobe from '@/components/mainwordrobe/wordrobe';
-import Footer from '@/components/mainfooter/mainfooter';
+import Footer from '@/components/footer';
 
 export { shouldRevalidate } from '@/lib/revalidation/routes/home';
 
