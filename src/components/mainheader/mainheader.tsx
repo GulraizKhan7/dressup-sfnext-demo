@@ -1,10 +1,10 @@
-import { User, ShoppingBag, ChevronDown } from 'lucide-react';
-import type { CSSProperties } from 'react';
-import { useEffect, useRef } from 'react';
+import { Search, User, ChevronDown } from 'lucide-react';
+import { type CSSProperties, useEffect, useRef } from 'react';
 import { useRouteLoaderData } from 'react-router';
 import SearchBar from '@/components/header/search';
 import ResponsiveNavigationMenu from '@/components/navigation-menu-mega';
 import { CitySelector } from '@/components/delivery-promise/city-selector';
+import CartBadge from '@/components/header/cart-badge';
 import type { LoaderData as AppLoaderData } from '@/routes/_app';
  
 const INK = '#111111';
@@ -42,14 +42,12 @@ const CATEGORY_LINKS = [
 const iconStyle = (color: string) => ({ color, stroke: color, fill: 'none', display: 'block' });
  
 type HeaderProps = {
-  cartCount?: number;
   root?: AppLoaderData['root'];
   defer?: AppLoaderData['subs'];
   embeddedComponent?: AppLoaderData['megaMenuComponent'];
 };
 
 export default function Header({
-  cartCount = 0,
   root: rootProp,
   defer: deferProp,
   embeddedComponent: embeddedComponentProp,
@@ -120,15 +118,8 @@ export default function Header({
             <ChevronDown size={14} className="hidden md:inline" style={iconStyle(MUTED)} />
           </a>
  
-          <a href="/cart" className="relative" aria-label="Cart" style={{ color: INK, textDecoration: 'none' }}>
-            <ShoppingBag size={22} strokeWidth={1.5} style={iconStyle(INK)} />
-            <span
-              className="absolute -top-1.5 -right-2 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ background: '#000', color: '#fff' }}
-            >
-              {cartCount}
-            </span>
-          </a>
+          {/* Real basket count + mini cart (opens after add to cart) */}
+          <CartBadge />
         </div>
       </div>
  
