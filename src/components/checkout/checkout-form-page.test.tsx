@@ -348,7 +348,13 @@ let mockOnPlaceOrder: (() => Promise<string | null>) | null = null;
 let mockBillingAddressGetter: (() => Record<string, unknown> | null) | null = null;
 
 vi.mock('./components/payment', () => ({
-    default: ({ paymentSubmissionRef }: { paymentSubmissionRef?: { current: Record<string, unknown> } }) => {
+    default: ({
+        paymentSubmissionRef,
+        expressPayments,
+    }: {
+        paymentSubmissionRef?: { current: Record<string, unknown> };
+        expressPayments?: ReactNode;
+    }) => {
         if (paymentSubmissionRef) {
             paymentSubmissionRef.current.formDataGetter = mockPaymentFormDataGetter;
             paymentSubmissionRef.current.setFormErrors = (
@@ -359,7 +365,12 @@ vi.mock('./components/payment', () => ({
             paymentSubmissionRef.current.onPlaceOrder = mockOnPlaceOrder;
             paymentSubmissionRef.current.billingAddressGetter = mockBillingAddressGetter;
         }
-        return <div data-testid="payment">Payment Form</div>;
+        return (
+            <div data-testid="payment">
+                Payment Form
+                {expressPayments}
+            </div>
+        );
     },
 }));
 
@@ -534,6 +545,9 @@ describe('CheckoutFormPage', () => {
 
     describe('Express payment handlers', () => {
         test('renders express payments component with all buttons', async () => {
+            // Express checkout lives inside the Payment section, which mounts at the payment step.
+            mockUseCheckoutContext.mockReturnValue(buildCheckoutContext({ step: defaultSteps.PAYMENT }));
+
             await renderCheckoutPage();
 
             // Wait for express payments component to load (lazy loaded with Suspense)
@@ -769,6 +783,9 @@ describe('CheckoutFormPage', () => {
 
     describe('Responsive order summary layout', () => {
         test('keeps main checkout content before sidebar in DOM so keyboard tab order matches visual reading order (WCAG 2.4.3)', async () => {
+            // Express checkout lives inside the Payment section, which mounts at the payment step.
+            mockUseCheckoutContext.mockReturnValue(buildCheckoutContext({ step: defaultSteps.PAYMENT }));
+
             await renderCheckoutPage();
 
             const sidebar = screen.getByTestId('checkout-order-summary-sidebar');
@@ -778,22 +795,26 @@ describe('CheckoutFormPage', () => {
             expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         });
 
-        test('uses responsive order classes to move sidebar right on lg while staying above main on md', async () => {
+        test('uses a two-column grid on lg with the sidebar on the right and still above main on md', async () => {
+            // Express checkout lives inside the Payment section, which mounts at the payment step.
+            mockUseCheckoutContext.mockReturnValue(buildCheckoutContext({ step: defaultSteps.PAYMENT }));
+
             const { container } = await renderCheckoutPage();
 
-            const grid = container.querySelector('.grid.grid-cols-1.lg\\:grid-cols-3.gap-8');
+            const grid = container.querySelector('.grid.grid-cols-1');
             expect(grid).toBeInTheDocument();
+            expect(grid?.className).toContain('lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]');
 
             const sidebar = screen.getByTestId('checkout-order-summary-sidebar');
             expect(sidebar.className).toContain('md:order-1');
             expect(sidebar.className).toContain('lg:order-2');
-            expect(sidebar.className).toContain('lg:col-span-1');
+            expect(sidebar.className).toContain('lg:col-start-2');
 
-            const mainContent = screen.getByTestId('express-payments').closest('div.space-y-6');
+            const mainContent = screen.getByTestId('express-payments').closest('div.space-y-4');
             expect(mainContent).toBeInTheDocument();
             expect(mainContent?.className).toContain('md:order-2');
             expect(mainContent?.className).toContain('lg:order-1');
-            expect(mainContent?.className).toContain('lg:col-span-2');
+            expect(mainContent?.className).toContain('lg:col-start-1');
         });
 
         test('place order button is DOM-after sidebar so promo code is tabbed before place order (WCAG 2.4.3)', async () => {
