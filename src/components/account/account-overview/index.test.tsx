@@ -66,17 +66,12 @@ describe('AccountOverview', () => {
     };
 
     describe('Heading structure', () => {
-        test('quick link labels are not rendered as headings', () => {
+        test('renders the account title and dashboard card headings', () => {
             renderWithRouter(<AccountOverview customer={mockCustomer} />);
 
-            // Quick link labels should not be headings
-            expect(screen.queryByRole('heading', { name: /address book/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('heading', { name: /payment methods/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('heading', { name: /order history/i })).not.toBeInTheDocument();
-            expect(screen.queryByRole('heading', { name: /wishlist/i })).not.toBeInTheDocument();
-
-            // But the section title should be a heading
-            expect(screen.getByRole('heading', { name: /quick links/i })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: /purchases/i })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument();
         });
     });
 });

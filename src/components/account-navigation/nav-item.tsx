@@ -32,6 +32,7 @@ interface AccountNavItemProps {
         path: string;
         icon: LucideIcon;
         label: string;
+        description?: string;
         disabled?: boolean;
         end?: boolean;
         action?: string;
@@ -45,7 +46,7 @@ export function AccountNavItem({ item, isMobile = false }: AccountNavItemProps):
     const { siteRef, localeRef } = useCurrentSiteAndLocaleRef();
     const Icon = item.icon;
     const baseClasses =
-        'w-full px-3 py-2 text-left text-sm font-normal leading-none flex items-center justify-start gap-2 overflow-hidden text-ellipsis whitespace-nowrap text-sidebar-foreground';
+        'w-full px-4 py-3 text-left text-sm font-semibold leading-none rounded-none flex items-center justify-start gap-3 overflow-hidden text-ellipsis whitespace-nowrap text-sidebar-foreground';
     const mobileClasses = `${baseClasses} border`;
     const disabledClasses = 'opacity-50 cursor-not-allowed pointer-events-none';
 
@@ -56,7 +57,7 @@ export function AccountNavItem({ item, isMobile = false }: AccountNavItemProps):
                 disabled
                 variant="ghost"
                 size="sm">
-                <Icon data-testid={`${item.label}-icon`} className="h-5 w-5" />
+                <Icon data-testid={`${item.label}-icon`} className="h-4 w-4" />
                 {item.label}
             </Button>
         );
@@ -76,8 +77,12 @@ export function AccountNavItem({ item, isMobile = false }: AccountNavItemProps):
             <Form method={item.method || 'post'} action={action} className="w-full">
                 <button
                     type="submit"
-                    className={cn(isMobile ? mobileClasses : baseClasses, activeClasses, 'cursor-pointer')}>
-                    <Icon data-testid={`${item.label}-icon`} className="h-5 w-5" />
+                    className={cn(
+                        isMobile ? mobileClasses : baseClasses,
+                        activeClasses,
+                        'cursor-pointer text-xs font-normal underline'
+                    )}>
+                    <Icon data-testid={`${item.label}-icon`} className="h-4 w-4" />
                     {item.label}
                 </button>
             </Form>
@@ -99,8 +104,13 @@ export function AccountNavItem({ item, isMobile = false }: AccountNavItemProps):
                           : 'hover:text-sidebar-foreground hover:bg-sidebar-accent'
                 )
             }>
-            <Icon data-testid={`${item.label}-icon`} className="h-5 w-5" />
-            {item.label}
+            <Icon data-testid={`${item.label}-icon`} className="h-5 w-5 shrink-0 self-start" />
+            <span className="flex min-w-0 flex-col gap-1">
+                {item.label}
+                {item.description && (
+                    <span className="text-xs font-normal text-muted-foreground">{item.description}</span>
+                )}
+            </span>
         </NavLink>
     );
 }

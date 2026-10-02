@@ -18,8 +18,8 @@ import type { ShopperCustomers, ShopperProducts } from '@/scapi';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger();
-import { Heart } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Link } from '@/components/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { WishlistListItem } from '@/components/wishlist/wishlist-list-item';
@@ -80,33 +80,20 @@ export function WishlistSkeleton(): ReactElement {
     const { t } = useTranslation('account');
 
     return (
-        <div className="space-y-6">
-            {/* Header card skeleton */}
-            <Card className="px-6 py-3 gap-0 rounded-ui bg-card border-border">
-                <h1 className="text-2xl font-semibold text-foreground mb-1">{t('navigation.wishlist')}</h1>
-                <Skeleton className="h-4 w-48" />
-            </Card>
-
-            {/* Items card skeleton */}
-            <Card className="py-0 gap-0">
-                <div className="p-4 border-b border-border">
-                    <Skeleton className="h-6 w-36" />
-                </div>
-                <div className="p-4 space-y-4">
-                    <Skeleton className="h-5 w-36" />
-                    {(['skeleton-1', 'skeleton-2', 'skeleton-3'] as const).map((key) => (
-                        <div key={key} className="flex gap-4 p-4 rounded-ui border border-border">
-                            <Skeleton className="w-20 h-20 md:w-28 md:h-28 flex-shrink-0 rounded-ui" />
-                            <div className="flex-1 space-y-2">
-                                <Skeleton className="h-4 w-3/4" />
-                                <Skeleton className="h-3 w-1/2" />
-                                <Skeleton className="h-5 w-16" />
-                            </div>
-                            <Skeleton className="w-20 h-6 flex-shrink-0" />
+        <div className="bg-muted/30 p-6 sm:p-8">
+            <div className="bg-card px-6 py-8 sm:px-10">
+                <h1 className="text-lg font-bold text-foreground mb-4">{t('navigation.wishlist')}</h1>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
+                    {(['skeleton-1', 'skeleton-2', 'skeleton-3', 'skeleton-4'] as const).map((key) => (
+                        <div key={key} className="space-y-3">
+                            <Skeleton className="w-full aspect-[3/4]" />
+                            <Skeleton className="h-4 w-3/4 mx-auto" />
+                            <Skeleton className="h-4 w-16 mx-auto" />
+                            <Skeleton className="h-9 w-full" />
                         </div>
                     ))}
                 </div>
-            </Card>
+            </div>
         </div>
     );
 }
@@ -203,36 +190,27 @@ export function WishlistPageContent({ items, productsByProductId }: WishlistPage
     }, [visibleItems.length, displayItems.length, t]);
 
     return (
-        <div className="space-y-5">
-            {/* Page Header Card */}
-            <Card className="bg-card border-border">
-                <CardContent className="px-6 py-3">
-                    <h1 className="text-2xl font-semibold text-foreground mb-1">{t('wishlist.pageTitle')}</h1>
-                    <p className="text-sm text-muted-foreground">{t('wishlist.pageSubtitle')}</p>
-                </CardContent>
-            </Card>
-
-            {/* Saved Items Card */}
-            <Card className="py-0 gap-0">
-                {/* Header: title + item count + sort/filter — separator (border-b) sits below */}
-                <div className="p-4 space-y-3 border-b border-border">
-                    <div className="space-y-1">
-                        <h2 className="text-lg font-semibold text-foreground">{t('wishlist.savedItems')}</h2>
-                        {/* The count line doubles as a persistent live region. It stays mounted
-                            (rendering empty at zero items) so a screen reader observes the
-                            empty→filled and filled→changed transitions when the shopper removes
-                            an item or applies a filter that changes the result set. When a filter
-                            empties the list the region is hidden visually (the centered placeholder
-                            below carries the message for sighted users) but still announces the
-                            no-results state to screen readers. */}
+        <div className="bg-muted/30 p-6 sm:p-8" data-testid="wishlist-panel">
+            <div className="bg-card px-6 py-8 sm:px-10 min-h-[32rem]">
+                {/* List selector (single list) */}
+                <div className="flex items-center gap-8 border-b border-border pb-6">
+                    <div className="min-w-64 border border-foreground/60 px-4 py-4 text-sm text-foreground">
+                        {t('wishlist.pageTitle')}
                         <p
                             role="status"
                             aria-live="polite"
                             aria-atomic="true"
-                            className={cn('text-sm text-muted-foreground', displayItems.length === 0 && 'sr-only')}>
+                            className={cn(
+                                'mt-1 text-xs text-muted-foreground',
+                                displayItems.length === 0 && visibleItems.length > 0 && 'sr-only'
+                            )}>
                             {resultSummary}
                         </p>
                     </div>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                    <h1 className="text-lg font-bold text-foreground">{t('wishlist.savedItems')}</h1>
                     {visibleItems.length > 0 && (
                         <WishlistSortFilter
                             sortValue={sortOption}
@@ -244,22 +222,19 @@ export function WishlistPageContent({ items, productsByProductId }: WishlistPage
                 </div>
 
                 {visibleItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                        <Heart className="w-16 h-16 text-muted-foreground/40 mb-4" />
-                        <h3 className="text-sm font-medium text-foreground mb-2">{t('wishlist.emptyTitle')}</h3>
-                        <p className="text-muted-foreground">{t('wishlist.emptySubtitle')}</p>
+                    <div className="py-14">
+                        <h2 className="text-base text-foreground mb-4">{t('wishlist.emptyTitle')}</h2>
+                        <p className="text-sm text-foreground mb-6">{t('wishlist.emptySubtitle')}</p>
+                        <Button asChild size="lg" className="rounded-ui">
+                            <Link to="/">{t('wishlist.shopNow', { defaultValue: 'Shop now' })}</Link>
+                        </Button>
                     </div>
                 ) : displayItems.length === 0 ? (
-                    // Centered visual empty-state for sighted users. aria-hidden because the
-                    // persistent status region in the header already announces the same text
-                    // to screen readers; hiding this copy avoids reading it twice.
-                    <div
-                        aria-hidden="true"
-                        className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                        <p className="text-muted-foreground">{t('wishlist.noFilterResults')}</p>
+                    <div aria-hidden="true" className="py-14">
+                        <p className="text-sm text-muted-foreground">{t('wishlist.noFilterResults')}</p>
                     </div>
                 ) : (
-                    <div className="p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-10 py-10 sm:grid-cols-3 lg:grid-cols-4">
                         {displayItems.map((item) => {
                             if (!item.id || !item.productId) return null;
                             const product = productsByProductId[item.productId];
@@ -276,7 +251,14 @@ export function WishlistPageContent({ items, productsByProductId }: WishlistPage
                         })}
                     </div>
                 )}
-            </Card>
+
+                <p className="mt-10 text-xs text-foreground">
+                    {t('wishlist.sharedComputerNotice', {
+                        defaultValue:
+                            'Other people who use this computer will be able to view your Wish List until you sign out.',
+                    })}
+                </p>
+            </div>
         </div>
     );
 }

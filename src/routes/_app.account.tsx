@@ -18,7 +18,7 @@ import { Outlet, redirect, type ShouldRevalidateFunctionArgs } from 'react-route
 import type { Route } from './+types/_app.account';
 import { useTranslation } from 'react-i18next';
 import { useConfig } from '@salesforce/storefront-next-runtime/config';
-import { House, User, Heart, ShoppingBag, MapPin, CreditCard, Building, KeyRound, LogOut } from 'lucide-react';
+import { House, User, Heart, Package, MapPin, CreditCard, Building, KeyRound, LogOut } from 'lucide-react';
 
 // Runtime SDK
 import type { ShopperCustomers, ShopperConsents } from '@/scapi';
@@ -26,6 +26,8 @@ import type { ShopperCustomers, ShopperConsents } from '@/scapi';
 // Components
 import { AccountNavList, type AccountNavItemData } from '@/components/account-navigation';
 import { Card, CardContent } from '@/components/ui/card';
+import { NavLink } from '@/components/link';
+import { cn } from '@/lib/utils';
 
 // Lib
 import { getSubscriptions } from '@/lib/api/consent.server';
@@ -131,52 +133,73 @@ export default function AccountPage({ loaderData }: { loaderData: AccountPageDat
     // Stable context reference so child Await does not get new promise refs on every layout re-render.
     const outletContext = useMemo(() => ({ customer, subscriptions }), [customer, subscriptions]);
 
-    const navigationItems: AccountNavItemData[] = useMemo(
+    const navGroups: { title: string; items: AccountNavItemData[] }[] = useMemo(
         () => [
             {
-                path: '/account/overview',
-                icon: House,
-                label: t('navigation.overview'),
+                title: t('navigation.groups.accountInfo', { defaultValue: 'Account Info' }),
+                items: [
+                    {
+                        path: '/account/orders',
+                        icon: Package,
+                        label: t('navigation.purchases', { defaultValue: 'Purchases' }),
+                        description: t('navigation.purchasesDescription', {
+                            defaultValue: 'Track, manage & return',
+                        }),
+                    },
+                    {
+                        path: '/account/wishlist',
+                        icon: Heart,
+                        label: t('navigation.wishlist'),
+                        description: t('navigation.wishlistDescription', {
+                            defaultValue: 'Create & manage lists',
+                        }),
+                    },
+                    {
+                        path: '/account/payment-methods',
+                        icon: CreditCard,
+                        label: t('navigation.paymentMethods'),
+                        description: t('navigation.paymentMethodsDescription', {
+                            defaultValue: 'Add a payment method',
+                        }),
+                    },
+                    {
+                        path: '/account/addresses',
+                        icon: MapPin,
+                        label: t('navigation.shippingAddresses', { defaultValue: 'Shipping Addresses' }),
+                        description: t('navigation.addressesDescription', {
+                            defaultValue: 'Add a shipping address',
+                        }),
+                    },
+                ],
             },
             {
-                path: '/account',
-                icon: User,
-                label: t('navigation.accountDetails'),
-                end: true,
-            },
-            {
-                path: '/account/wishlist',
-                icon: Heart,
-                label: t('navigation.wishlist'),
-            },
-            {
-                path: '/account/orders',
-                icon: ShoppingBag,
-                label: t('navigation.orderHistory'),
-            },
-            {
-                path: '/account/addresses',
-                icon: MapPin,
-                label: t('navigation.addresses'),
-            },
-            {
-                path: '/account/payment-methods',
-                icon: CreditCard,
-                label: t('navigation.paymentMethods'),
-            },
-            ...(passkeyEnabled
-                ? [
-                      {
-                          path: routes.accountPasskeys,
-                          icon: KeyRound,
-                          label: t('navigation.passkeys'),
-                      },
-                  ]
-                : []),
-            {
-                path: '/account/store-preferences',
-                icon: Building,
-                label: t('navigation.storePreferences'),
+                title: t('navigation.groups.settings', { defaultValue: 'Settings' }),
+                items: [
+                    {
+                        path: '/account',
+                        icon: User,
+                        label: t('navigation.personalInfo', { defaultValue: 'Personal Info' }),
+                        description: t('navigation.personalInfoDescription', {
+                            defaultValue: 'Password, email, mobile & more',
+                        }),
+                        end: true,
+                    },
+                    ...(passkeyEnabled
+                        ? [
+                              {
+                                  path: routes.accountPasskeys,
+                                  icon: KeyRound,
+                                  label: t('navigation.passkeys'),
+                              },
+                          ]
+                        : []),
+                    {
+                        path: '/account/store-preferences',
+                        icon: Building,
+                        label: t('navigation.yourStore', { defaultValue: 'Your Store' }),
+                        description: t('navigation.yourStoreDescription', { defaultValue: 'Set your store' }),
+                    },
+                ],
             },
         ],
         [t, passkeyEnabled]
@@ -205,7 +228,10 @@ export default function AccountPage({ loaderData }: { loaderData: AccountPageDat
                                 <CardContent className="p-4">
                                     <h2 className="text-sm font-semibold text-foreground mb-4">{t('myAccount')}</h2>
                                     <nav className="space-y-1">
-                                        <AccountNavList items={navigationItems} isMobile={true} />
+                                        <AccountNavList
+                                            items={navGroups.flatMap((group) => group.items)}
+                                            isMobile={true}
+                                        />
                                         <AccountNavList items={[logoutItem]} isMobile={true} />
                                     </nav>
                                 </CardContent>
@@ -214,10 +240,29 @@ export default function AccountPage({ loaderData }: { loaderData: AccountPageDat
                         {/* Desktop Sidebar Navigation */}
                         <div className="hidden lg:block">
                             <div className="space-y-4">
-                                <h2 className="text-2xl font-semibold text-foreground">{t('myAccount')}</h2>
-                                <nav className="space-y-1">
-                                    <AccountNavList items={navigationItems} />
-                                    <AccountNavList items={[logoutItem]} />
+                                <nav className="w-72 border-l-2 border-foreground/10 bg-muted/30">
+                                    <NavLink
+                                        to="/account/overview"
+                                        className={({ isActive }) =>
+                                            cn(
+                                                'flex items-center gap-3 border-l-2 px-4 py-4 text-sm font-semibold -ml-0.5',
+                                                isActive ? 'border-foreground' : 'border-transparent'
+                                            )
+                                        }>
+                                        <House className="h-5 w-5" aria-hidden="true" />
+                                        {t('myAccount')}
+                                    </NavLink>
+                                    {navGroups.map((group) => (
+                                        <div key={group.title} className="border-t border-border px-0 py-3">
+                                            <h2 className="px-4 pb-2 text-sm font-semibold text-foreground">
+                                                {group.title}
+                                            </h2>
+                                            <AccountNavList items={group.items} />
+                                        </div>
+                                    ))}
+                                    <div className="border-t border-border px-0 py-3">
+                                        <AccountNavList items={[logoutItem]} />
+                                    </div>
                                 </nav>
                             </div>
                         </div>

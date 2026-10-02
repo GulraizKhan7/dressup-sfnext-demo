@@ -200,7 +200,7 @@ describe('Addresses page', () => {
                 expect(screen.getByTestId('address-card-home')).toBeInTheDocument();
             });
 
-            expect(screen.getByText(t('account:navigation.addresses'))).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Shipping Addresses' })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: t('account:addresses.addNewAddress') })).toBeInTheDocument();
         });
 
