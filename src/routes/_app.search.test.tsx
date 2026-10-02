@@ -189,7 +189,9 @@ vi.mock('@/components/category-pagination', () => ({
 }));
 
 vi.mock('@/components/category-refinements', () => ({
-    default: () => <div data-testid="category-refinements" />,
+    default: ({ layout }: { layout?: string }) => (
+        <div data-testid={layout === 'bar' ? 'category-refinements-bar' : 'category-refinements'} />
+    ),
 }));
 
 vi.mock('@/components/category-refinements/active-filters', () => ({
@@ -701,13 +703,17 @@ describe('SearchPage', () => {
                 initialFiltersOpen: false,
             };
 
-            const { unmount } = render(
-                <MemoryRouter initialEntries={['/search?q=shoes&filters=open']}>
-                    <AllProvidersWrapper>
-                        <SearchPage loaderData={openLoaderData} />
-                    </AllProvidersWrapper>
-                </MemoryRouter>
-            );
+            // The filters drawer is a lazy overlay: render inside an awaited act so its chunk can load and mount.
+            let unmount = () => {};
+            await act(async () => {
+                ({ unmount } = render(
+                    <MemoryRouter initialEntries={['/search?q=shoes&filters=open']}>
+                        <AllProvidersWrapper>
+                            <SearchPage loaderData={openLoaderData} />
+                        </AllProvidersWrapper>
+                    </MemoryRouter>
+                ));
+            });
 
             await waitFor(() => {
                 expect(screen.getByTestId('category-refinements')).toBeInTheDocument();
@@ -916,8 +922,9 @@ describe('SearchPage', () => {
             );
 
             await waitFor(() => {
-                const filterButtons = screen.getAllByTestId('filters-button');
-                expect(filterButtons).toHaveLength(2);
+                // One Filter button in the horizontal filter bar, next to sort and the facet buttons.
+                expect(screen.getByTestId('filters-button')).toBeInTheDocument();
+                expect(screen.getByTestId('category-refinements-bar')).toBeInTheDocument();
                 expect(screen.getByTestId('category-sorting')).toBeInTheDocument();
             });
         });
@@ -993,7 +1000,7 @@ describe('SearchPage', () => {
             });
         });
 
-        test('should not render sorting when no sorting options available', async () => {
+        test('should keep the sorting control in the filter bar when no sorting options are available', async () => {
             const searchResultWithoutSorting = { ...mockSearchResult, sortingOptions: [] };
             const loaderData: SearchPageData = {
                 searchTerm: 'shoes',
@@ -1015,7 +1022,7 @@ describe('SearchPage', () => {
             );
 
             await waitFor(() => {
-                expect(screen.queryByTestId('category-sorting')).not.toBeInTheDocument();
+                expect(screen.getByTestId('category-sorting')).toBeInTheDocument();
             });
         });
 
