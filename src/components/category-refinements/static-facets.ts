@@ -16,6 +16,14 @@
 
 import type { FilterValue } from './types';
 
+/** Buttons the filter bar always shows (Brand, Size, Price, Color); each opens its row in the filters drawer. */
+export const FILTER_BAR_FACETS: Array<{ label: string; attributeId: string }> = [
+    { label: 'Brand', attributeId: 'brand' },
+    { label: 'Size', attributeId: 'c_size' },
+    { label: 'Price', attributeId: 'price' },
+    { label: 'Color', attributeId: 'c_refinementColor' },
+];
+
 export interface StaticFacet {
     attributeId: string;
     label: string;

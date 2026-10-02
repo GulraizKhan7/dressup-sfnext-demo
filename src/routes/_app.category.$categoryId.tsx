@@ -32,6 +32,7 @@ import type { CategoryProductsResult } from '@/routes/resource.category-products
 import ActiveFilters from '@/components/category-refinements/active-filters';
 import FiltersButton from '@/components/category-refinements/filters-button';
 import CategoryRefinements from '@/components/category-refinements';
+import { FILTER_BAR_FACETS } from '@/components/category-refinements/static-facets';
 
 // Overlay: only loaded (and mounted) once the shopper opens the filters for the first time.
 const FiltersDrawer = lazy(() => import('@/components/category-refinements/filters-drawer'));
@@ -322,14 +323,6 @@ function CategoryJsonLd({
     const nonce = rootData?.nonce ?? undefined;
     return categorySchema ? <JsonLd data={categorySchema} id="category-schema" nonce={nonce} /> : null;
 }
-
-/** Facets the filter bar always shows; disabled until the search result provides them. */
-const FILTER_BAR_FACETS = [
-    { label: 'Brand', attributeId: 'brand' },
-    { label: 'Size', attributeId: 'c_size' },
-    { label: 'Price', attributeId: 'price' },
-    { label: 'Color', attributeId: 'c_refinementColor' },
-];
 
 export default function CategoryPage({
     loaderData: {
