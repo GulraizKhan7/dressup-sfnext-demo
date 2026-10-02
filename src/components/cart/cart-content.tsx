@@ -84,7 +84,7 @@ const LazyCartItemAddToWishlistButton = lazy(() =>
  * @property {Record<string, ShopperProducts.schemas['Product']>} [productsByItemId] - Item ID to product mapping
  * @property {Record<string, ShopperPromotions.schemas['Promotion']>} [promotions] - Promotion ID to promotion mapping
  * @property {string[]} [wishlistProductIds] - Product IDs in the shopper wishlist (from cart loader) for line-level wishlist state after refresh
- * @property {ReactNode} [recommendationsSlot] - Below-the-fold recommendations region; the route owns recommender selection, i18n, and promise pinning
+ * @property {ReactNode} [categoryRecommendationsSlot] - Category products below the cart and order summary
  */
 interface CartContentProps {
     basket: ShopperBasketsV2.schemas['Basket'] | undefined;
@@ -92,7 +92,7 @@ interface CartContentProps {
     bonusProductsById: Record<string, ShopperProducts.schemas['Product']>;
     promotions?: Record<string, ShopperPromotions.schemas['Promotion']>;
     wishlistProductIds?: readonly string[];
-    recommendationsSlot?: ReactNode;
+    categoryRecommendationsSlot?: ReactNode;
     ruleBasedBonusProductsPromise: Promise<Record<string, ShopperSearch.schemas['ProductSearchHit'][]>>;
 }
 
@@ -116,7 +116,7 @@ export default function CartContent({
     bonusProductsById,
     promotions,
     wishlistProductIds = [],
-    recommendationsSlot,
+    categoryRecommendationsSlot,
     ruleBasedBonusProductsPromise,
 }: CartContentProps): ReactElement {
     const { t } = useTranslation('cart');
@@ -544,20 +544,25 @@ export default function CartContent({
                             </div>
                         )}
                     </div>
-                    <div data-slot="order-summary" className="hidden md:block md:order-1 lg:order-2">
-                        <UITarget targetId="sfcc.cart.orderSummary.before" />
-                        <OrderSummary
-                            basket={basket}
-                            surface="cart"
-                            showCartItems={false}
-                            isEstimate={true}
-                            productsByItemId={productsByItemId}
-                            showPromoCodeForm={true}
-                            showCheckoutAction={true}
-                            inventoryValidation={inventoryValidation}
-                        />
-                        <UITarget targetId="sfcc.cart.bnpl.message" />
+                    <div data-slot="order-summary" className="md:order-2 lg:order-2">
+                        <div className="hidden md:block">
+                            <UITarget targetId="sfcc.cart.orderSummary.before" />
+                            <OrderSummary
+                                basket={basket}
+                                surface="cart"
+                                showCartItems={false}
+                                isEstimate={true}
+                                productsByItemId={productsByItemId}
+                                showPromoCodeForm={true}
+                                showCheckoutAction={true}
+                                inventoryValidation={inventoryValidation}
+                            />
+                            <UITarget targetId="sfcc.cart.bnpl.message" />
+                        </div>
                     </div>
+                </div>
+                <div className="mt-8 space-y-12">
+                    {categoryRecommendationsSlot}
                 </div>
 
                 {/* Bonus Product Carousels - one per bonusDiscountLineItem (lazy chunks reduce cart script size) */}
@@ -622,8 +627,6 @@ export default function CartContent({
                         </div>
                     );
                 })}
-
-                {recommendationsSlot}
 
                 {selectedBonusProduct && (
                     <Suspense fallback={null}>

@@ -41,6 +41,7 @@ import { fetchPromotionsForBasket } from '@/lib/cart/basket-promotions.server';
 import { fetchWishlistProductIdsForCart } from '@/lib/cart/cart-wishlist.server';
 import { fetchRuleBasedBonusProductsForBasket } from '@/lib/cart/rule-based-bonus.server';
 import { fetchProductRecommendations } from '@/lib/product/recommendations.server';
+import { fetchSearchProducts } from '@/lib/api/search.server';
 import { EINSTEIN_RECOMMENDERS } from '@/lib/product/einstein-recommenders';
 import { uiConfig } from '@/lib/config.ui';
 import { getConfig } from '@salesforce/storefront-next-runtime/config';
@@ -50,9 +51,9 @@ import type { Recommendation } from '@/hooks/recommenders/use-recommenders';
 // Components
 import CartSkeleton from '@/components/cart/cart-skeleton';
 import CartContent from '@/components/cart/cart-content';
+import CartCategoryRecommendations from '@/components/cart/cart-category-recommendations';
 import { CartLoadError } from '@/components/cart/cart-load-error';
 import { SeoMeta } from '@/components/seo-meta';
-import DeferredProductRecommendations from '@/components/product-recommendations/deferred';
 import { ProductRecommendationSkeleton } from '@/components/product/skeletons';
 import { buildCanonicalUrl } from '@/utils/canonical-url';
 import { useTranslation } from 'react-i18next';
@@ -157,8 +158,51 @@ export const loader = ({ context, request }: Route.LoaderArgs): CartPageData => 
     // Recommendations are gated per-vertical via uiConfig.pages.cart.showRecommendations. When a vertical
     // turns them off (e.g. cosmetic), skip the Einstein fetches entirely — resolve to empty so the
     // promise shape the component pins stays stable, but no SCAPI recommendation call is made.
+    let categoryProductsPromise: Promise<ShopperSearch.schemas['ProductSearchHit'][]> | undefined;
+    const getCategoryProducts = (): Promise<ShopperSearch.schemas['ProductSearchHit'][]> => {
+        categoryProductsPromise ??= basketDataPromise
+            .then(async ({ basket, productsByItemId }) => {
+                const lastCartItem = basket.productItems?.at(-1);
+                const addedProduct = lastCartItem?.itemId ? productsByItemId[lastCartItem.itemId] : undefined;
+                const categoryId = addedProduct?.primaryCategory?.id ?? addedProduct?.primaryCategoryId;
+                if (!categoryId) return [];
+
+                const cartProductIds = new Set(
+                    Object.values(productsByItemId)
+                        .flatMap((product) => [product.id, product.master?.masterId])
+                        .filter((id): id is string => Boolean(id))
+                );
+                const pageSize = getConfig(context)?.search?.products?.hits?.limit ?? 24;
+                const searchParameters = {
+                    refine: [`cgid=${categoryId}`],
+                    limit: pageSize,
+                    ...(currency ? { currency } : {}),
+                };
+                const firstPage = await fetchSearchProducts(context, searchParameters);
+                const hits = [...(firstPage.hits ?? [])];
+                const total = firstPage.total ?? hits.length;
+                const offsets = Array.from(
+                    { length: Math.max(0, Math.ceil(total / pageSize) - 1) },
+                    (_, index) => (index + 1) * pageSize
+                );
+                const remainingPages = await Promise.all(
+                    offsets.map((offset) => fetchSearchProducts(context, { ...searchParameters, offset }))
+                );
+                const seenProductIds = new Set<string>();
+                return [...hits, ...remainingPages.flatMap((page) => page.hits ?? [])].filter((product) => {
+                    if (!product.productId || cartProductIds.has(product.productId) || seenProductIds.has(product.productId)) {
+                        return false;
+                    }
+                    seenProductIds.add(product.productId);
+                    return true;
+                });
+            })
+            .catch((): ShopperSearch.schemas['ProductSearchHit'][] => []);
+        return categoryProductsPromise;
+    };
+
     const cartMayAlsoLikePromise = uiConfig.pages.cart.showRecommendations
-        ? basketDataPromise
+          ? basketDataPromise
               .then(({ productsByItemId }) => {
                   const seen = new Set<string>();
                   const products: ShopperProducts.schemas['Product'][] = [];
@@ -177,15 +221,29 @@ export const loader = ({ context, request }: Route.LoaderArgs): CartPageData => 
                       }
                   );
               })
+              .then(async (recommendation) => {
+                  const categoryProducts = await getCategoryProducts();
+                  return {
+                      ...recommendation,
+                      displayMessage: undefined,
+                      recs: categoryProducts.slice(0, Math.ceil(categoryProducts.length / 2)),
+                  };
+              })
               .catch((): Recommendation => ({}))
         : Promise.resolve<Recommendation>({});
 
-    // CART_RECENTLY_VIEWED is identity-only (cookieId/userId), no product input — fire immediately.
     const cartRecentlyViewedPromise = uiConfig.pages.cart.showRecommendations
         ? fetchProductRecommendations(
-              { context, request },
-              { name: EINSTEIN_RECOMMENDERS.CART_RECENTLY_VIEWED, ...(currency ? { currency } : {}) }
-          )
+                  { context, request },
+                  { name: EINSTEIN_RECOMMENDERS.CART_RECENTLY_VIEWED, ...(currency ? { currency } : {}) }
+              ).then(async (recommendation) => {
+                  const categoryProducts = await getCategoryProducts();
+                  return {
+                      ...recommendation,
+                      displayMessage: undefined,
+                      recs: categoryProducts.slice(Math.ceil(categoryProducts.length / 2)),
+                  };
+              })
         : Promise.resolve<Recommendation>({});
 
     // Rule-based bonus carousels live below the fold. Defer them so the cart shell paints without waiting on N
@@ -257,27 +315,19 @@ export default function Cart(): ReactElement {
     // and the live slot are undefined so CartContent / CartSkeleton render no recommendation region.
     const mayAlsoLikeTitle = tProduct('recommendations.youMightAlsoLike');
     const recentlyViewedTitle = tProduct('recommendations.recentlyViewed');
-    const recommendationsSkeleton = uiConfig.pages.cart.showRecommendations ? (
-        <div className="mt-16 space-y-16">
-            <ProductRecommendationSkeleton title={mayAlsoLikeTitle} className="max-w-none px-0" />
-        </div>
+    const mayAlsoLikeSkeleton = uiConfig.pages.cart.showRecommendations ? (
+        <ProductRecommendationSkeleton title={mayAlsoLikeTitle} className="max-w-none px-0" />
     ) : undefined;
-    const recommendationsSlot = uiConfig.pages.cart.showRecommendations ? (
-        <div className="mt-16 space-y-16">
-            <DeferredProductRecommendations
-                recommenderName={EINSTEIN_RECOMMENDERS.CART_MAY_ALSO_LIKE}
-                recommenderTitle={mayAlsoLikeTitle}
-                data={pinnedMayAlsoLikePromise}
-                className="max-w-none px-0"
-                fallback={<ProductRecommendationSkeleton title={mayAlsoLikeTitle} className="max-w-none px-0" />}
-            />
-            <DeferredProductRecommendations
-                recommenderName={EINSTEIN_RECOMMENDERS.CART_RECENTLY_VIEWED}
-                recommenderTitle={recentlyViewedTitle}
-                data={pinnedRecentlyViewedPromise}
-                className="max-w-none px-0"
-            />
-        </div>
+    const recentlyViewedSkeleton = uiConfig.pages.cart.showRecommendations ? (
+        <ProductRecommendationSkeleton title={recentlyViewedTitle} className="max-w-none px-0" />
+    ) : undefined;
+    const categoryRecommendationsSlot = uiConfig.pages.cart.showRecommendations ? (
+        <CartCategoryRecommendations
+            mayAlsoLikePromise={pinnedMayAlsoLikePromise}
+            recentlyViewedPromise={pinnedRecentlyViewedPromise}
+            mayAlsoLikeTitle={mayAlsoLikeTitle}
+            recentlyViewedTitle={recentlyViewedTitle}
+        />
     ) : undefined;
 
     return (
@@ -293,7 +343,8 @@ export default function Cart(): ReactElement {
                 fallback={
                     <CartSkeleton
                         productItemCount={pageData.basketSnapshot?.uniqueProductCount ?? 0}
-                        recommendationsSlot={recommendationsSkeleton}
+                        mayAlsoLikeSlot={mayAlsoLikeSkeleton}
+                        recentlyViewedSlot={recentlyViewedSkeleton}
                     />
                 }>
                 <Await resolve={pageData.basketDataPromise} errorElement={<CartLoadError />}>
@@ -303,7 +354,7 @@ export default function Cart(): ReactElement {
                                 <CartBody
                                     basketData={basketData}
                                     wishlistProductIds={[]}
-                                    recommendationsSlot={recommendationsSlot}
+                                    categoryRecommendationsSlot={categoryRecommendationsSlot}
                                     ruleBasedBonusProductsPromise={pageData.ruleBasedBonusProductsPromise}
                                 />
                             }>
@@ -313,7 +364,7 @@ export default function Cart(): ReactElement {
                                     <CartBody
                                         basketData={basketData}
                                         wishlistProductIds={[]}
-                                        recommendationsSlot={recommendationsSlot}
+                                        categoryRecommendationsSlot={categoryRecommendationsSlot}
                                         ruleBasedBonusProductsPromise={pageData.ruleBasedBonusProductsPromise}
                                     />
                                 }>
@@ -321,7 +372,7 @@ export default function Cart(): ReactElement {
                                     <CartBody
                                         basketData={basketData}
                                         wishlistProductIds={wishlistProductIds}
-                                        recommendationsSlot={recommendationsSlot}
+                                        categoryRecommendationsSlot={categoryRecommendationsSlot}
                                         ruleBasedBonusProductsPromise={pageData.ruleBasedBonusProductsPromise}
                                     />
                                 )}
@@ -342,12 +393,12 @@ export default function Cart(): ReactElement {
 function CartBody({
     basketData,
     wishlistProductIds,
-    recommendationsSlot,
+    categoryRecommendationsSlot,
     ruleBasedBonusProductsPromise,
 }: {
     basketData: Awaited<CartPageData['basketDataPromise']>;
     wishlistProductIds: string[];
-    recommendationsSlot?: ReactElement;
+    categoryRecommendationsSlot?: ReactElement;
     ruleBasedBonusProductsPromise: CartPageData['ruleBasedBonusProductsPromise'];
 }): ReactElement {
     const content = (
@@ -357,7 +408,7 @@ function CartBody({
             bonusProductsById={basketData.bonusProductsById}
             promotions={basketData.promotions}
             wishlistProductIds={wishlistProductIds}
-            recommendationsSlot={recommendationsSlot}
+            categoryRecommendationsSlot={categoryRecommendationsSlot}
             ruleBasedBonusProductsPromise={ruleBasedBonusProductsPromise}
         />
     );
