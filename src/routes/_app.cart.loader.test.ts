@@ -50,6 +50,10 @@ vi.mock('@/lib/api/search.server', () => ({
     fetchSearchProducts: vi.fn(),
 }));
 
+vi.mock('@/lib/api/products.server', () => ({
+    fetchProductsByIds: vi.fn(),
+}));
+
 // Per-page UI flags. Default to the canonical value (recommendations on); the
 // gating test flips it to assert the loader skips the Einstein fetches.
 vi.mock('@/lib/config.ui', () => ({
@@ -68,6 +72,7 @@ vi.mock('@/extensions/bopis/lib/api/stores.server', () => ({
 
 import { getBasket, getBasketSnapshot } from '@/middlewares/basket.server';
 import { fetchProductsInBasket } from '@/lib/cart/basket-products.server';
+import { fetchProductsByIds } from '@/lib/api/products.server';
 import { fetchPromotionsForBasket } from '@/lib/cart/basket-promotions.server';
 import { fetchWishlistProductIdsForCart } from '@/lib/cart/cart-wishlist.server';
 import { fetchProductRecommendations } from '@/lib/product/recommendations.server';
@@ -279,19 +284,11 @@ describe('Cart route loader', () => {
         expect(recentlyViewedCall).toBeDefined();
     });
 
-    test('loads all other products from the added product category across search pages', async () => {
+    test('loads other products from the category of the cart products (first page), without the cart products', async () => {
         const firstPage = Array.from({ length: 24 }, (_, index) => ({
             productId: index === 0 ? 'product-1' : `category-product-${index}`,
         }));
-        const secondPage = [{ productId: 'category-product-24' }, { productId: 'category-product-25' }];
-        vi.mocked(fetchSearchProducts).mockImplementation((_context, parameters) =>
-            Promise.resolve(
-                {
-                    hits: parameters.offset ? secondPage : firstPage,
-                    total: 26,
-                } as any
-            )
-        );
+        vi.mocked(fetchSearchProducts).mockResolvedValue({ hits: firstPage, total: 60 } as any);
 
         const result = loader(createLoaderArgs()) as any;
         const [mayAlsoLike, recentlyViewed] = await Promise.all([
@@ -299,17 +296,78 @@ describe('Cart route loader', () => {
             result.cartRecentlyViewedPromise,
         ]);
         const displayedProducts = [...mayAlsoLike.recs, ...recentlyViewed.recs];
-        expect(displayedProducts).toHaveLength(25);
-        expect(new Set(displayedProducts.map((product) => product.productId)).size).toBe(25);
+        // 23 products: the 24 hits minus the product that is already in the cart.
+        expect(displayedProducts).toHaveLength(23);
+        expect(new Set(displayedProducts.map((product) => product.productId)).size).toBe(23);
         expect(displayedProducts.some((product) => product.productId === 'product-1')).toBe(false);
+        expect(fetchSearchProducts).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ refine: ['cgid=shirts'], limit: 24 })
+        );
+        // Only the first page is fetched, no matter how many products the category holds.
+        expect(fetchSearchProducts).toHaveBeenCalledTimes(1);
+    });
+
+    test('resolves the category from the master product when the cart line is a variant', async () => {
+        vi.mocked(fetchProductsInBasket).mockResolvedValue({
+            productsByItemId: {
+                'item-1': { id: 'product-1-XS', master: { masterId: 'product-1' } } as any,
+            },
+            bonusProductsById: {},
+        });
+        vi.mocked(fetchProductsByIds).mockResolvedValue([{ id: 'product-1', primaryCategoryId: 'shirts' } as any]);
+        vi.mocked(fetchSearchProducts).mockResolvedValue({
+            hits: [{ productId: 'other-1' }, { productId: 'other-2' }],
+            total: 2,
+        } as any);
+
+        const result = loader(createLoaderArgs()) as any;
+        const [mayAlsoLike, recentlyViewed] = await Promise.all([
+            result.cartMayAlsoLikePromise,
+            result.cartRecentlyViewedPromise,
+        ]);
+
+        expect(fetchProductsByIds).toHaveBeenCalledWith(expect.anything(), ['product-1'], expect.anything());
+        expect(fetchSearchProducts).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ refine: ['cgid=shirts'] })
+        );
+        expect([...mayAlsoLike.recs, ...recentlyViewed.recs].map((product) => product.productId).sort()).toEqual([
+            'other-1',
+            'other-2',
+        ]);
+    });
+
+    test('uses the categories of every cart product (up to three), not just the last one', async () => {
+        vi.mocked(fetchProductsInBasket).mockResolvedValue({
+            productsByItemId: {
+                'item-1': { id: 'product-1', primaryCategoryId: 'shirts' } as any,
+                'item-2': { id: 'product-2', primaryCategoryId: 'shoes' } as any,
+            },
+            bonusProductsById: {},
+        });
+        vi.mocked(fetchSearchProducts).mockImplementation((_context, parameters) =>
+            Promise.resolve({
+                hits: [{ productId: `${parameters.refine?.[0]}-hit` }],
+                total: 1,
+            } as any)
+        );
+
+        const result = loader(createLoaderArgs()) as any;
+        const [mayAlsoLike, recentlyViewed] = await Promise.all([
+            result.cartMayAlsoLikePromise,
+            result.cartRecentlyViewedPromise,
+        ]);
+
         expect(fetchSearchProducts).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({ refine: ['cgid=shirts'] })
         );
         expect(fetchSearchProducts).toHaveBeenCalledWith(
             expect.anything(),
-            expect.objectContaining({ refine: ['cgid=shirts'], offset: 24 })
+            expect.objectContaining({ refine: ['cgid=shoes'] })
         );
+        expect([...mayAlsoLike.recs, ...recentlyViewed.recs]).toHaveLength(2);
     });
 
     test('cartMayAlsoLikePromise silently degrades when basketDataPromise rejects', async () => {

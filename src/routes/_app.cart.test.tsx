@@ -168,7 +168,7 @@ describe('Cart route component', () => {
             // The skeleton receives the translated title for its recommender so the heading doesn't pop in when the
             // promise resolves.
             const titles = skeletons.map((el) => el.textContent);
-            expect(titles).toEqual(['You might also like', 'Recently viewed']);
+            expect(titles).toEqual(['You might also like', 'Trending Near You']);
         });
 
         test('renders the rec skeleton via the CartSkeleton fallback while basketDataPromise is pending', async () => {
@@ -217,7 +217,7 @@ describe('Cart route component', () => {
             const skeletons = await screen.findAllByTestId('product-recommendation-skeleton');
             expect(skeletons).toHaveLength(2);
             const titles = skeletons.map((el) => el.textContent);
-            expect(titles).toEqual(['You might also like', 'Recently viewed']);
+            expect(titles).toEqual(['You might also like', 'Trending Near You']);
         });
 
         test('does not render ProductRecommendationSkeleton once recommendation promises resolve', async () => {
