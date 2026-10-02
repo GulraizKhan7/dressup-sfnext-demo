@@ -247,6 +247,8 @@ export default defineConfig<Config>(
                     apiKey: '',
                 },
                 mrtBasedPageDesignerResolution: false,
+                // Save returns on the order via the Returns custom API (cartridge rest-apis/returns). Off until deployed.
+                returnsCustomApi: false,
             },
             // Guest Order Lookup configuration
             // Allows guests to look up past orders using order number + email + access-code verification.

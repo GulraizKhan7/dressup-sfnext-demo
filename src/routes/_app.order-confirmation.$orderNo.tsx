@@ -45,6 +45,7 @@ import { getCardTypeDisplay } from '@/lib/payment/payment-utils';
 import { getDisplayVariationValues } from '@/lib/product/product-utils';
 import OrderSkeleton from '@/components/order-skeleton';
 import { OrderDeliveries } from '@/components/delivery-promise/order-deliveries';
+import { parseDeliverySplit } from '@/lib/delivery-promise';
 import { SeoMeta } from '@/components/seo-meta';
 import { useTranslation } from 'react-i18next';
 import { toImageUrl } from '@/lib/images/dynamic-image';
@@ -466,6 +467,7 @@ function OrderConfirmationContent({
                 {/* Deliveries: items, delivery date and tracking number per delivery */}
                 <OrderDeliveries
                     orderNo={order.orderNo ?? ''}
+                    split={parseDeliverySplit((order as { c_deliverySplit?: unknown }).c_deliverySplit)}
                     items={productItems.flatMap((item) =>
                         item.itemId && item.productId && !item.bonusProductLineItem
                             ? [
