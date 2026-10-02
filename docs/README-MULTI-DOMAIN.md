@@ -9,7 +9,7 @@ You do **not** need a separate build or environment per domain. The storefront d
 shopper-facing domain on every request and adapts automatically.
 
 > This is the mirror image of [Base Path](./README-BASE-PATH.md). Use this page when **many domains
-> share one environment**; use Base Path when **one domain is split across many environments**.
+> share one environment**; use Base Path when **one domain is split across many environments**..
 
 | Scenario | Doc |
 |---|---|

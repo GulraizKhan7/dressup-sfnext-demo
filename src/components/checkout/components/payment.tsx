@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronDown, Check } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { getLastFourDigits } from '@/lib/payment/payment-utils';
 import { formatAddress } from '@/lib/address/address-utils';
 import { getCardIcon } from '@/lib/payment/card-icon-utils';
@@ -46,6 +47,8 @@ interface PaymentProps {
     showUseDifferentBilling?: boolean;
     paymentSubmissionRef?: PaymentSubmissionRef;
     hidePaymentSaveCheckbox?: boolean;
+    /** Rendered under the "Payment" title and above the payment methods (e.g. express checkout buttons). */
+    expressPayments?: ReactNode;
 }
 
 export default function Payment({
@@ -59,6 +62,7 @@ export default function Payment({
     showUseDifferentBilling = true,
     paymentSubmissionRef,
     hidePaymentSaveCheckbox = false,
+    expressPayments,
 }: PaymentProps) {
     const { t } = useTranslation('checkout');
 
@@ -117,6 +121,7 @@ export default function Payment({
                 isLoading={isLoading}
                 showHeaderSeparator>
                 <ToggleCardEdit>
+                    {expressPayments && <div className="pt-2">{expressPayments}</div>}
                     <Form {...form}>
                         <form
                             onSubmit={(e) => void form.handleSubmit(handleFormSubmit)(e)}
@@ -233,7 +238,7 @@ export default function Payment({
 
                                     {(savedPaymentMethods.length === 0 || paymentRadioValue === 'new') && (
                                         <div className="space-y-2">
-                                            <div className="rounded-ui border border-input bg-card p-4 space-y-4">
+                                            <div className="space-y-4">
                                                 {(savedPaymentMethods.length === 0 || paymentRadioValue === 'new') && (
                                                     <div className="flex items-center gap-2">
                                                         <RadioGroup
@@ -273,7 +278,7 @@ export default function Payment({
                                                         name="savePaymentToProfile"
                                                         render={({ field }) => {
                                                             return (
-                                                                <FormItem className="space-y-0">
+                                                                <FormItem className="space-y-0 pt-2">
                                                                     <label
                                                                         htmlFor={field.name}
                                                                         className="flex cursor-pointer items-start gap-3">

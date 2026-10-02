@@ -477,7 +477,31 @@
             "retry": "Retry"
         }
     },
+    "fulfillmentLocation": {
+        "leadTime": "Lead time",
+        "leadTimeDays_one": "{{count}} day",
+        "leadTimeDays_other": "{{count}} days",
+        "distanceValue": "{{value}} {{unit}}",
+        "unavailable": "Unavailable",
+        "exceedsStock": "Only {{stock}} available.",
+        "deliveryBy": "Delivery by {{date}}",
+        "shipsFrom": "Ships from {{city}}",
+        "cartGroupHeading": "Delivery from {{city}} - {{itemCount}} out of {{totalCount}} items"
+    },
     "checkout": {
+        "shippingSummary": {
+            "heading": "Shipping",
+            "arrives": "Arrives {{when}}",
+            "chooseMethod": "Choose a shipping method to see when your order arrives.",
+            "changeSpeed": "Change shipping speed",
+            "free": "Free",
+            "quantity": "Quantity {{count}}"
+        },
+        "reviewOrder": {
+            "title": "Review order",
+            "yourItems": "Your items",
+            "secureNote": "Checkout is secure and encrypted."
+        },
         "pageTitle": "Checkout",
         "contactInfo": {
             "title": "Contact Information",
