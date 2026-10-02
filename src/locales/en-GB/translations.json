@@ -357,6 +357,7 @@
         "insufficientStock": "Not enough stock available"
     },
     "cart": {
+        "trendingNearYou": "Trending Near You",
         "title": "Cart",
         "loadingLabel": "Loading your cart",
         "delivery": {
