@@ -17,7 +17,7 @@
 import { useMemo, type ReactElement } from 'react';
 import { Truck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { buildDeliveries, hasDeliveryData, useShopperCityId } from '@/lib/delivery-promise';
+import { buildDeliveries, hasDeliveryData, useShopperCityId, type DeliverySplit } from '@/lib/delivery-promise';
 import { useDeliveryFormat } from './use-delivery-format';
 
 export interface OrderDeliveryLine {
@@ -31,6 +31,22 @@ export interface OrderDeliveryLine {
 interface OrderDeliveriesProps {
     orderNo: string;
     items: readonly OrderDeliveryLine[];
+    /**
+     * The split saved on the order (`order.c_deliverySplit`) at checkout. When present it is shown exactly as saved: it
+     * does not change with the shopper's current city, stock or today's date. Orders placed before it was saved have
+     * none, and fall back to calculating the split for the current city.
+     */
+    split?: DeliverySplit | null;
+}
+
+interface DeliveryView {
+    id: string;
+    city: string;
+    deliveryDate: string;
+    /** Total days from the order to delivery. */
+    totalDays: number;
+    trackingNumber?: string;
+    items: { itemId: string; productName: string; quantity: number }[];
 }
 
 /**
@@ -38,18 +54,39 @@ interface OrderDeliveriesProps {
  * numbers are seeded from the order number, so the same order always shows the same numbers. Renders
  * nothing when no line has hub stock data.
  */
-export function OrderDeliveries({ orderNo, items }: OrderDeliveriesProps): ReactElement | null {
+export function OrderDeliveries({ orderNo, items, split }: OrderDeliveriesProps): ReactElement | null {
     const { t, date, leadTime } = useDeliveryFormat();
     const cityId = useShopperCityId();
-    const deliveries = useMemo(
-        () =>
-            buildDeliveries(
-                items.filter((item) => hasDeliveryData(item.productId)),
-                cityId,
-                { trackingSeed: orderNo }
-            ),
-        [items, cityId, orderNo]
-    );
+    const deliveries = useMemo((): DeliveryView[] => {
+        const names = new Map(items.map((item) => [item.itemId, item.productName]));
+        if (split) {
+            return split.deliveries.map((delivery) => ({
+                id: delivery.id,
+                city: delivery.city,
+                deliveryDate: delivery.deliveryDate,
+                totalDays: delivery.leadTimeDays,
+                trackingNumber: delivery.trackingNumber,
+                items: delivery.items.map((item) => ({
+                    itemId: item.itemId,
+                    productName: names.get(item.itemId) ?? item.productId,
+                    quantity: item.quantity,
+                })),
+            }));
+        }
+        // Older order without a saved split: calculate it for the shopper's current city.
+        return buildDeliveries(
+            items.filter((item) => hasDeliveryData(item.productId)),
+            cityId,
+            { trackingSeed: orderNo }
+        ).map((delivery) => ({
+            id: delivery.id,
+            city: delivery.city,
+            deliveryDate: delivery.deliveryDate,
+            totalDays: delivery.leadTimeDays + delivery.transitDays,
+            trackingNumber: delivery.trackingNumber,
+            items: delivery.items.map(({ itemId, productName, quantity }) => ({ itemId, productName, quantity })),
+        }));
+    }, [items, cityId, orderNo, split]);
     if (deliveries.length === 0) return null;
 
     return (
@@ -79,8 +116,7 @@ export function OrderDeliveries({ orderNo, items }: OrderDeliveriesProps): React
                                 <div>
                                     <dt className="font-medium text-foreground">{t('arrives', 'Arrives')}</dt>
                                     <dd>
-                                        {date(delivery.deliveryDate)} (
-                                        {leadTime(delivery.leadTimeDays + delivery.transitDays)})
+                                        {date(delivery.deliveryDate)} ({leadTime(delivery.totalDays)})
                                     </dd>
                                 </div>
                                 {delivery.trackingNumber && (

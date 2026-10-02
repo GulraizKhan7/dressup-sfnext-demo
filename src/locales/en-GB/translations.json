@@ -2121,5 +2121,86 @@
         "deliveryNumberFrom": "Delivery {{number}} of {{total}} – from {{city}}",
         "arrives": "Arrives",
         "trackingNumber": "Tracking number"
+    },
+    "returns": {
+        "actions": {
+            "returnOrExchange": "Return or exchange",
+            "inProgress": "Return in progress"
+        },
+        "form": {
+            "pageTitle": "Return or exchange",
+            "title": "Return or exchange items",
+            "subtitle": "Order #{{orderNo}}. Select the items you want to send back or swap.",
+            "delivery": "Delivery {{index}}",
+            "deliveryFrom": "Delivery {{index}} – from {{city}}",
+            "deliveredOn": "Delivery date: {{date}}",
+            "selectItem": "Select {{name}}",
+            "quantity": "Quantity",
+            "action": "What would you like to do?",
+            "actionReturn": "Return",
+            "actionExchange": "Exchange",
+            "reason": "Reason",
+            "reasonPlaceholder": "Choose a reason",
+            "replacement": "Replacement",
+            "noExchangeOptions": "No other size or colour is available for this item.",
+            "alreadyRequested": "All units of this item are already in a return request.",
+            "selectedCount_one": "{{count}} item selected",
+            "selectedCount_other": "{{count}} items selected",
+            "submit": "Submit request",
+            "submitting": "Submitting…",
+            "submitError": "We couldn't save your request. Please try again.",
+            "backToOrder": "Back to order",
+            "noLines": "This order has no items that can be returned.",
+            "loadError": "We couldn't load this order.",
+            "incompleteHint": "Pick a reason for every selected item. For an exchange, also pick a different size or colour."
+        },
+        "eligibility": {
+            "status": {
+                "eligible": "Eligible",
+                "exchangeOnly": "Exchange only",
+                "notReturnable": "Not returnable",
+                "windowClosed": "Window closed"
+            },
+            "reason": {
+                "eligible": "Returnable until {{date}}.",
+                "exchangeOnly": "Final sale. It can be exchanged but not refunded.",
+                "notReturnable": "This item can't be returned or exchanged.",
+                "windowClosed": "The return window ended on {{date}}.",
+                "noDeliveryDate": "There is no delivery date for this item."
+            }
+        },
+        "reasons": {
+            "tooSmall": "Too small",
+            "tooLarge": "Too large",
+            "defective": "Defective or damaged",
+            "notAsDescribed": "Not as described",
+            "changedMind": "Changed my mind",
+            "wrongItem": "Received the wrong item"
+        },
+        "status": {
+            "submitted": "Submitted",
+            "approved": "Approved",
+            "received": "Received",
+            "refunded": "Refunded",
+            "exchange_shipped": "Exchange shipped"
+        },
+        "tracking": {
+            "pageTitle": "Return status",
+            "title": "Return request",
+            "rmaNumber": "RMA number",
+            "order": "Order",
+            "submittedOn": "Submitted",
+            "items": "Items",
+            "itemLine": "{{name}} × {{quantity}}",
+            "actionReturn": "Return",
+            "actionExchange": "Exchange for {{replacement}}",
+            "timeline": "Status",
+            "trackingNumber": "Tracking number",
+            "advance": "Advance status",
+            "notFoundTitle": "We can't find this return",
+            "notFoundDescription": "Check the link, or open the return from your order history.",
+            "backToOrders": "Back to order history",
+            "viewOrder": "View order"
+        }
     }
 }

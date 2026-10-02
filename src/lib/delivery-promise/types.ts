@@ -114,6 +114,7 @@ export interface Delivery<T extends DeliveryLineInput = DeliveryLineInput> {
     city: string;
     leadTimeDays: number;
     transitDays: number;
+    distanceKm: number;
     deliveryDate: string;
     inStock: boolean;
     /** See `DeliveryPromise.maxAvailableUnits`. */
