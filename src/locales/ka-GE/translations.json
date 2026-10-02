@@ -285,5 +285,86 @@
       "deliveryAddressDescription": "მიწოდება მისამართზე",
       "deliveryDescription": "შეიყვანეთ საფოსტო ინდექსი მიწოდების სავარაუდო დროის სანახავად"
     }
+  },
+  "returns": {
+    "actions": {
+      "returnOrExchange": "დაბრუნება ან გაცვლა",
+      "inProgress": "დაბრუნება მიმდინარეობს"
+    },
+    "form": {
+      "pageTitle": "დაბრუნება ან გაცვლა",
+      "title": "ნივთების დაბრუნება ან გაცვლა",
+      "subtitle": "შეკვეთა #{{orderNo}}. აირჩიეთ ნივთები, რომელთა დაბრუნება ან გაცვლა გსურთ.",
+      "delivery": "მიწოდება {{index}}",
+      "deliveryFrom": "მიწოდება {{index}} – {{city}}-დან",
+      "deliveredOn": "მიწოდების თარიღი: {{date}}",
+      "selectItem": "აირჩიეთ {{name}}",
+      "quantity": "რაოდენობა",
+      "action": "რისი გაკეთება გსურთ?",
+      "actionReturn": "დაბრუნება",
+      "actionExchange": "გაცვლა",
+      "reason": "მიზეზი",
+      "reasonPlaceholder": "აირჩიეთ მიზეზი",
+      "replacement": "ჩანაცვლება",
+      "noExchangeOptions": "ამ ნივთისთვის სხვა ზომა ან ფერი მიუწვდომელია.",
+      "alreadyRequested": "ამ ნივთის ყველა ერთეული უკვე დაბრუნების მოთხოვნაშია.",
+      "selectedCount_one": "არჩეულია {{count}} ნივთი",
+      "selectedCount_other": "არჩეულია {{count}} ნივთი",
+      "submit": "მოთხოვნის გაგზავნა",
+      "submitting": "იგზავნება…",
+      "submitError": "მოთხოვნის შენახვა ვერ მოხერხდა. გთხოვთ, სცადოთ ხელახლა.",
+      "backToOrder": "შეკვეთაზე დაბრუნება",
+      "noLines": "ამ შეკვეთაში დასაბრუნებელი ნივთები არ არის.",
+      "loadError": "ამ შეკვეთის ჩატვირთვა ვერ მოხერხდა.",
+      "incompleteHint": "აირჩიეთ მიზეზი თითოეული არჩეული ნივთისთვის. გაცვლისას აირჩიეთ განსხვავებული ზომა ან ფერი."
+    },
+    "eligibility": {
+      "status": {
+        "eligible": "ხელმისაწვდომია",
+        "exchangeOnly": "მხოლოდ გაცვლა",
+        "notReturnable": "დაბრუნებას არ ექვემდებარება",
+        "windowClosed": "ვადა ამოიწურა"
+      },
+      "reason": {
+        "eligible": "დაბრუნება შესაძლებელია {{date}}-მდე.",
+        "exchangeOnly": "საბოლოო გაყიდვა. შესაძლებელია გაცვლა, თანხის დაბრუნების გარეშე.",
+        "notReturnable": "ამ ნივთის დაბრუნება ან გაცვლა შეუძლებელია.",
+        "windowClosed": "დაბრუნების ვადა ამოიწურა {{date}}.",
+        "noDeliveryDate": "ამ ნივთისთვის მიწოდების თარიღი არ არის."
+      }
+    },
+    "reasons": {
+      "tooSmall": "ძალიან პატარაა",
+      "tooLarge": "ძალიან დიდია",
+      "defective": "დეფექტური ან დაზიანებული",
+      "notAsDescribed": "არ შეესაბამება აღწერას",
+      "changedMind": "გადავიფიქრე",
+      "wrongItem": "არასწორი ნივთი მივიღე"
+    },
+    "status": {
+      "submitted": "გაგზავნილია",
+      "approved": "დამტკიცებულია",
+      "received": "მიღებულია",
+      "refunded": "თანხა დაბრუნებულია",
+      "exchange_shipped": "გაცვლილი ნივთი გაგზავნილია"
+    },
+    "tracking": {
+      "pageTitle": "დაბრუნების სტატუსი",
+      "title": "დაბრუნების მოთხოვნა",
+      "rmaNumber": "RMA ნომერი",
+      "order": "შეკვეთა",
+      "submittedOn": "გაგზავნის თარიღი",
+      "items": "ნივთები",
+      "itemLine": "{{name}} × {{quantity}}",
+      "actionReturn": "დაბრუნება",
+      "actionExchange": "გაცვლა: {{replacement}}",
+      "timeline": "სტატუსი",
+      "trackingNumber": "თრექინგის ნომერი",
+      "advance": "სტატუსის გაგრძელება",
+      "notFoundTitle": "ამ დაბრუნებას ვერ ვპოულობთ",
+      "notFoundDescription": "შეამოწმეთ ბმული ან გახსენით დაბრუნება შეკვეთების ისტორიიდან.",
+      "backToOrders": "შეკვეთების ისტორიაზე დაბრუნება",
+      "viewOrder": "შეკვეთის ნახვა"
+    }
   }
 }
