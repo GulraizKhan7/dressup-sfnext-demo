@@ -122,7 +122,7 @@ describe('<AccountNavItem />', () => {
             render(createTestWrapper(<AccountNavItem item={logoutItem} />));
 
             const button = screen.getByRole('button', { name: 'Log Out' });
-            expect(button).toHaveClass('w-full', 'px-3', 'py-2', 'text-left');
+            expect(button).toHaveClass('w-full', 'px-4', 'py-3', 'text-left');
             expect(button).toHaveClass('text-sidebar-foreground');
         });
 

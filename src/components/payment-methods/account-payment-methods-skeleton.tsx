@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import type { ReactElement } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { AccountPanel } from '@/components/account-panel';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
@@ -23,46 +23,19 @@ import { Skeleton } from '@/components/ui/skeleton';
  */
 export function AccountPaymentMethodsSkeleton(): ReactElement {
     return (
-        <div className="space-y-5">
-            {/* Page Header Skeleton */}
-            <Card className="bg-card border-border">
-                <CardContent className="px-6 py-3">
-                    <div>
-                        <Skeleton className="h-6 w-48 mb-1" />
-                        <Skeleton className="h-4 w-96" />
+        <AccountPanel>
+            <Skeleton className="h-6 w-48 mb-3" />
+            <Skeleton className="h-8 w-40" />
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {[1, 2].map((i) => (
+                    <div key={i} className="min-h-48 space-y-3 border border-border p-6">
+                        <Skeleton className="h-4 w-40" />
+                        <Skeleton className="h-3 w-56" />
+                        <Skeleton className="h-3 w-12" />
+                        <Skeleton className="h-3 w-14" />
                     </div>
-                </CardContent>
-            </Card>
-
-            {/* Payment Methods Section Skeleton */}
-            <Card className="p-6">
-                <div className="flex items-center justify-between pb-6 border-b">
-                    <div>
-                        <Skeleton className="h-5 w-40 mb-1" />
-                        <Skeleton className="h-4 w-64" />
-                    </div>
-                    <Skeleton className="h-10 w-40" />
-                </div>
-
-                <div className="pt-2 space-y-6">
-                    {/* Payment Method Card Skeletons */}
-                    {[1, 2].map((i) => (
-                        <Card key={i} className="p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1 pr-4">
-                                    <Skeleton className="h-5 w-48 mb-2" />
-                                    <Skeleton className="h-4 w-64 mb-4" />
-                                    <div className="flex items-center gap-4">
-                                        <Skeleton className="h-4 w-24" />
-                                        <Skeleton className="h-4 w-16" />
-                                    </div>
-                                </div>
-                                <Skeleton className="h-6 w-10" />
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-            </Card>
-        </div>
+                ))}
+            </div>
+        </AccountPanel>
     );
 }
