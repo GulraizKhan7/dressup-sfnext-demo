@@ -75,18 +75,23 @@ export default function AddressCard({
     return (
         <Card
             data-testid="address-card"
-            className={`gap-0 py-4 relative ${isPreferred ? '[--ui-border-width:2px] border-primary' : ''}`}>
-            <CardContent className="px-6 pt-4">
-                <AddressDisplay address={address} showName={true} isPreferred={isPreferred} />
+            className="gap-0 py-4 relative [--ui-radius:0px] [--ui-shadow:none] border-border min-h-48">
+            <CardContent className="px-6 pt-2">
+                {isPreferred && (
+                    <p className="mb-2 text-sm font-bold text-foreground">
+                        {t('account:addresses.primaryAddress', { defaultValue: 'Primary shipping address' })}
+                    </p>
+                )}
+                <AddressDisplay address={address} showName={true} />
             </CardContent>
             {(onEdit || onRemove || onSetDefault) && (
-                <CardFooter className="gap-4 px-6 pt-2">
+                <CardFooter className="flex-col items-start gap-3 px-6 pt-4">
                     {onEdit && (
                         <Button
                             onClick={onEdit}
                             variant="link"
                             size="sm"
-                            className="font-bold px-0"
+                            className="h-auto p-0 text-xs font-normal underline"
                             aria-label={t('account:addresses.editAddress')}>
                             {t('account:addresses.editAddress')}
                         </Button>
@@ -96,7 +101,7 @@ export default function AddressCard({
                             onClick={onSetDefault}
                             variant="link"
                             size="sm"
-                            className={`font-bold px-0 ${isPreferred ? 'text-muted-foreground cursor-not-allowed' : ''}`}
+                            className={`h-auto p-0 text-xs font-normal underline ${isPreferred ? 'hidden' : ''}`}
                             aria-label={t('account:addresses.setDefault')}
                             disabled={isPreferred || isSettingDefault}>
                             {t('account:addresses.setDefault')}
@@ -107,7 +112,7 @@ export default function AddressCard({
                             onClick={onRemove}
                             variant="link"
                             size="sm"
-                            className="font-bold px-0"
+                            className="h-auto p-0 text-xs font-normal underline"
                             aria-label={t('actionCard:remove')}
                             disabled={isRemoving}>
                             {t('actionCard:remove')}

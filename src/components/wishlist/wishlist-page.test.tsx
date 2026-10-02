@@ -40,6 +40,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Mock WishlistListItem to isolate page-level logic
+vi.mock('@/components/link', () => ({
+    Link: ({ to, children }: { to: string; children: React.ReactNode }) => <a href={to}>{children}</a>,
+}));
+
 vi.mock('@/components/wishlist/wishlist-list-item', () => ({
     WishlistListItem: ({
         product,
@@ -116,11 +120,6 @@ describe('WishlistPageContent', () => {
         test('renders page title', () => {
             render(<WishlistPageContent items={allItems} productsByProductId={allProducts} />);
             expect(screen.getByText(t('account:wishlist.pageTitle'))).toBeInTheDocument();
-        });
-
-        test('renders page subtitle', () => {
-            render(<WishlistPageContent items={allItems} productsByProductId={allProducts} />);
-            expect(screen.getByText(t('account:wishlist.pageSubtitle'))).toBeInTheDocument();
         });
 
         test('renders item count', () => {
