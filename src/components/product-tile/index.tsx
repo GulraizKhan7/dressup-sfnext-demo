@@ -540,7 +540,7 @@ const ProductTile = memo(
                                     PRODUCT_TILE_SELECTABLE_ATTRIBUTE_ID === 'color' ? selectedAttributeValue : null
                                 }
                                 imgAspectRatio={effectiveImgAspectRatio}
-                                className="w-full aspect-square [&_img]:object-cover! [&_img]:h-full! [&_img]:max-w-full! [&_img]:mx-auto!"
+                                className="w-full aspect-square [&_img]:object-cover! [&_img]:h-full! [&_img]:w-full! [&_img]:max-w-full!"
                                 handleProductClick={handleProductClick}
                             />
                             <UITarget targetId="sfcc.plp.shipping.deliveryEstimate" />
