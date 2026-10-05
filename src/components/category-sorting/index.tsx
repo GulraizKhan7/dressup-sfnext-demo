@@ -15,6 +15,7 @@
  */
 import { type ReactElement, useCallback, useId, useMemo, useState } from 'react';
 import { useLocation, useNavigation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@/hooks/use-navigate';
 
 import type { ShopperSearch } from '@/scapi';
@@ -66,6 +67,7 @@ export default function CategorySorting({
     const navigation = useNavigation();
     const isPending = navigation.state !== 'idle';
     const selectId = useId();
+    const { t } = useTranslation('category');
     const [sortOpen, setSortOpen] = useState(false);
     const [staticSort, setStaticSort] = useState('featured');
 
@@ -105,7 +107,7 @@ export default function CategorySorting({
                     <PopoverTrigger asChild>
                         <Button
                             variant="outline"
-                            aria-label="Sort by:"
+                            aria-label={t('sortByLabel')}
                             data-testid="sort-trigger"
                             className="h-11 gap-2 px-4 text-foreground">
                             <ArrowUpDown className="size-5" aria-hidden />
@@ -113,7 +115,7 @@ export default function CategorySorting({
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-56 p-0">
-                        <div role="listbox" aria-label="Sort by:" className="py-1">
+                        <div role="listbox" aria-label={t('sortByLabel')} className="py-1">
                             {options.map((option) => {
                                 const isSelected = option.id === selectedId;
                                 return (
@@ -135,7 +137,9 @@ export default function CategorySorting({
                                                 ? 'bg-primary text-primary-foreground'
                                                 : 'text-foreground hover:bg-muted'
                                         )}>
-                                        {option.label}
+                                        {useStaticOptions
+                                            ? t(`staticSort.${option.id.replace(/-/g, '_')}`, { defaultValue: option.label })
+                                            : option.label}
                                     </button>
                                 );
                             })}
@@ -155,7 +159,7 @@ export default function CategorySorting({
         <div
             className={`flex items-center space-x-2${isPending ? ' pointer-events-none opacity-50 transition-opacity' : ''}`}>
             <label htmlFor={selectId} className="text-sm text-muted-foreground">
-                Sort by:
+                {t('sortByLabel')}
             </label>
             <NativeSelect
                 id={selectId}

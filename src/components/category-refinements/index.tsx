@@ -31,7 +31,7 @@ import RefineColor from './refine-color';
 import RefineSize from './refine-size';
 import RefinePrice from './refine-price';
 import RefineCategory from './refine-cgid';
-import { STATIC_FACETS } from './static-facets';
+import { localizeStaticFacets } from './static-facets';
 // @sfdc-extension-line SFDC_EXT_BOPIS
 import RefineInventory from '@/extensions/bopis/components/refine-inventory';
 
@@ -217,7 +217,7 @@ export default function CategoryRefinements({
 
     if (layout === 'accordion') {
         const rows = (
-            isStaticFallback ? (STATIC_FACETS as typeof refinements) : refinements
+            isStaticFallback ? (localizeStaticFacets(t) as typeof refinements) : refinements
         ).filter((refinement) => Array.isArray(refinement.values) && refinement.values.length);
         if (rows.length === 0) return null;
         return (
@@ -273,7 +273,11 @@ export default function CategoryRefinements({
                             (refinement) => (refinement.label ?? '').toLowerCase() === placeholder.label.toLowerCase()
                         )
                 )
-                .map((placeholder) => ({ ...placeholder, selectedCount: 0 })),
+                .map((placeholder) => ({
+                    ...placeholder,
+                    label: t(`category:filterBar.${placeholder.attributeId}`, { defaultValue: placeholder.label }),
+                    selectedCount: 0,
+                })),
         ];
         if (items.length === 0) return null;
         return (

@@ -16,6 +16,7 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@/components/link';
+import { useCategoryName } from '@/hooks/use-category-name';
 import type { ShopperProducts } from '@/scapi';
 import { ChevronRight } from 'lucide-react';
 import { routes, routeHref } from '@/route-paths';
@@ -25,6 +26,7 @@ type PathRecord = NonNullable<PrimaryCategory['parentCategoryTree']>[number];
 
 export default function CategoryBreadcrumbs({ category }: { category: PrimaryCategory }): ReactElement {
     const { t } = useTranslation('category');
+    const categoryName = useCategoryName();
     const items: PathRecord[] = category.parentCategoryTree ?? [{ id: category.id, name: category.name }];
     return (
         <nav aria-label={t('breadcrumbs.label')} className="mb-6">
@@ -43,7 +45,7 @@ export default function CategoryBreadcrumbs({ category }: { category: PrimaryCat
                                 to={routeHref(routes.category, { categoryId: item.id ?? '' })}
                                 className="hover:underline"
                                 aria-current={isLast ? 'page' : undefined}>
-                                {item.name}
+                                {categoryName(item.name)}
                             </Link>
                         </li>
                     );

@@ -134,6 +134,7 @@ function SizeVariationDropdown({
     values: VariationAttribute['values'];
     onSelect: (value: string) => void;
 }): ReactElement {
+    const { t } = useTranslation('product');
     const [open, setOpen] = useState(false);
     const selectedOption = values.find((value) => value.value === selectedValue);
 
@@ -154,9 +155,9 @@ function SizeVariationDropdown({
                 sideOffset={0}
                 className="max-h-[min(70vh,32rem)] w-[var(--radix-popover-trigger-width)] overflow-y-auto rounded-none border-border bg-background p-0 shadow-md">
                 <div className="border-b border-border px-4 py-3">
-                    <h3 className="text-sm font-semibold text-foreground">Choose a size</h3>
+                    <h3 className="text-sm font-semibold text-foreground">{t('chooseSize')}</h3>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        Select a size to check availability{selectedColor ? ` in ${selectedColor}` : ''}.
+                        {selectedColor ? t('selectSizeToCheckInColor', { color: selectedColor }) : t('selectSizeToCheck')}
                     </p>
                 </div>
                 <ul className="divide-y divide-border">
@@ -172,7 +173,7 @@ function SizeVariationDropdown({
                                 className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:text-muted-foreground">
                                 <span>{value.name}</span>
                                 {value.disabled && selectedColor ? (
-                                    <span className="text-xs text-muted-foreground">Not available in {selectedColor}</span>
+                                    <span className="text-xs text-muted-foreground">{t('notAvailableInColor', { color: selectedColor })}</span>
                                 ) : null}
                             </button>
                         </li>

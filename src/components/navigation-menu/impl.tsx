@@ -34,6 +34,7 @@ import {
 import type { ShopperProducts } from '@/scapi';
 import { NavLink } from '@/components/link';
 import { useSubCategory } from './context';
+import { useCategoryName } from '@/hooks/use-category-name';
 import { routes, routeHref } from '@/route-paths';
 
 export type CategoryNavigationMenuListCtx = {
@@ -106,6 +107,7 @@ function CategoryNavigationMenuItemLeaf({
     renderElement?: SlotType<CategoryNavigationMenuListItemCtx>;
     className?: string;
 }) {
+    const categoryName = useCategoryName();
     const leafContent = renderSlot(renderElement, itemCtx);
     if (isValidElement(leafContent)) {
         return leafContent;
@@ -113,7 +115,7 @@ function CategoryNavigationMenuItemLeaf({
     return (
         <NavigationMenuLink {...props} className={className ?? navigationMenuTriggerStyle()} asChild>
             <NavLink to={routeHref(routes.category, { categoryId: itemCtx.category.id })}>
-                {itemCtx.category.name}
+                {categoryName(itemCtx.category.name)}
             </NavLink>
         </NavigationMenuLink>
     );
@@ -264,6 +266,7 @@ export default function CategoryNavigationMenu({
     viewport = true,
     ...props
 }: CategoryNavigationMenuProps) {
+    const categoryName = useCategoryName();
     if (maxDepth <= 0) {
         throw new Error('maxDepth must be greater than 0');
     }
@@ -325,7 +328,7 @@ export default function CategoryNavigationMenu({
                                                 typeof NavigationMenuTrigger
                                             >)}
                                             data-has-submenu="true">
-                                            {renderSlot(renderElement ?? category.name, itemCtx)}
+                                            {renderSlot(renderElement ?? categoryName(category.name), itemCtx)}
                                         </NavigationMenuTrigger>
                                         <NavigationMenuContent {...propsFor(propsContentContainer, itemCtx)}>
                                             <div {...propsFor(propsContent, itemCtx)}>

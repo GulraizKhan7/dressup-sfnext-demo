@@ -36,6 +36,7 @@ import { NavigationMenuLink } from '@/components/ui/navigation-menu';
 import { cn } from '@/lib/utils';
 import { useSubCategory } from '@/components/navigation-menu/context';
 import { routes, routeHref } from '@/route-paths';
+import { useCategoryName } from '@/hooks/use-category-name';
 import { Component } from '@/lib/decorators/component';
 import { RegionDefinition } from '@/lib/decorators';
 import { getRegionIds } from '@/lib/decorators/region-definition';
@@ -116,6 +117,7 @@ function CategoryBanner({
     ...props
 }: ComponentPropsWithoutRef<'a'> & { category: ShopperProducts.schemas['Category'] }) {
     const config = useConfig();
+    const categoryName = useCategoryName();
     const imageSrc = toImageUrl({ src: (category?.c_slotBannerImage as string) ?? '', config });
 
     // Transform any image URLs in the HTML banner to use DIS with WebP optimization
@@ -128,7 +130,7 @@ function CategoryBanner({
                     <img
                         className="object-contain w-full max-w-full max-h-[512px]"
                         src={imageSrc}
-                        alt={category.name}
+                        alt={categoryName(category.name)}
                     />
                 ) : (
                     // oxlint-disable-next-line react/no-danger
@@ -214,6 +216,8 @@ function MegaMenuFeaturedSlot({
 
 function ShopAllCategoryLink({ category }: { category: ShopperProducts.schemas['Category'] }): ReactElement {
     const { t } = useTranslation('header');
+    const categoryName = useCategoryName();
+    const localizedName = categoryName(category.name);
     return (
         <NavigationMenuLink asChild>
             <NavLink
@@ -225,8 +229,8 @@ function ShopAllCategoryLink({ category }: { category: ShopperProducts.schemas['
                 // container is not a grid, so col-span is inert.
                 className="block md:col-span-2 text-sm font-medium leading-5 underline underline-offset-4 hover:!bg-transparent focus:!bg-transparent hover:!text-header-menu-foreground/60 focus:!text-header-menu-foreground/60 transition-colors">
                 {t('shopAllCategory', {
-                    category: category.name,
-                    defaultValue: `Shop all ${category.name}`,
+                    category: localizedName,
+                    defaultValue: `Shop all ${localizedName}`,
                 })}
             </NavLink>
         </NavigationMenuLink>
@@ -254,6 +258,7 @@ function MobileMenuCategory({
     onNavigate: () => void;
 }): ReactElement {
     const { t } = useTranslation('header');
+    const categoryName = useCategoryName();
     const enrichedCategory = useSubCategory(rawCategory.id);
     const category = enrichedCategory ?? rawCategory;
     const hasChildren = hasSubcategories(category);
@@ -272,7 +277,7 @@ function MobileMenuCategory({
                         'block py-2 text-sm font-medium hover:opacity-70 transition-opacity',
                         level > 1 && 'text-header-foreground/80'
                     )}>
-                    {subcategory.name}
+                    {categoryName(subcategory.name)}
                 </NavLink>
                 {subcategory.categories?.length ? (
                     <ul className="pl-4 space-y-1">{renderSubcategoryLinks(subcategory.categories, level + 1)}</ul>
@@ -287,7 +292,7 @@ function MobileMenuCategory({
                     to={routeHref(routes.category, { categoryId: category.id })}
                     onClick={onNavigate}
                     className="flex-1 py-3 text-base font-medium hover:opacity-70 transition-opacity">
-                    {category.name}
+                    {categoryName(category.name)}
                 </NavLink>
 
                 {hasChildren && (
@@ -299,12 +304,12 @@ function MobileMenuCategory({
                         aria-label={
                             isExpanded
                                 ? t('collapseCategory', {
-                                      category: category.name,
-                                      defaultValue: `Collapse ${category.name}`,
+                                      category: categoryName(category.name),
+                                      defaultValue: `Collapse ${categoryName(category.name)}`,
                                   })
                                 : t('expandCategory', {
-                                      category: category.name,
-                                      defaultValue: `Expand ${category.name}`,
+                                      category: categoryName(category.name),
+                                      defaultValue: `Expand ${categoryName(category.name)}`,
                                   })
                         }
                         aria-expanded={isExpanded}>
@@ -435,6 +440,7 @@ export default function ResponsiveNavigationMenu({
 }: ResponsiveNavigationMenuProps): ReactElement {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { t } = useTranslation('header');
+    const categoryName = useCategoryName();
 
     const defaultListStyle = {
         width: '100%',
@@ -613,8 +619,8 @@ export default function ResponsiveNavigationMenu({
                                             regionId={regionIdFor(parent.id)}
                                             embeddedComponent={embeddedComponent}
                                             label={t('featuredContent', {
-                                                category: parent.name,
-                                                defaultValue: `${parent.name} featured content`,
+                                                category: categoryName(parent.name),
+                                                defaultValue: `${categoryName(parent.name)} featured content`,
                                             })}
                                         />
                                     );

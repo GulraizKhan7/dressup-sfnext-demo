@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import { type ReactElement, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ShopperProducts } from '@/scapi';
 import { useToast } from '@/components/toast';
 import { useConfig } from '@salesforce/storefront-next-runtime/config';
@@ -64,12 +65,13 @@ const providerLabels: Record<ShareProvider, string> = {
  * @returns JSX element with share button
  */
 export function ShareButton({ product, size = 'md', className, tabIndex }: ShareButtonProps): ReactElement {
+    const { t } = useTranslation('product');
     const { addToast } = useToast();
     const config = useConfig();
     const [open, setOpen] = useState(false);
 
-    const productName = product.name || 'Check out this product';
-    const productDescription = product.shortDescription || 'I found this great product';
+    const productName = product.name || t('shareButton.defaultShareTitle');
+    const productDescription = product.shortDescription || t('shareButton.defaultShareDescription');
     // Safely access window.location.href - only on client side
     const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
     const encodedUrl = encodeURIComponent(shareUrl);
@@ -82,7 +84,7 @@ export function ShareButton({ product, size = 'md', className, tabIndex }: Share
 
     const handleNativeShare = async () => {
         if (!navigator.share) {
-            addToast('Native sharing is not available on this device', 'error');
+            addToast(t('shareButton.nativeShareUnavailable'), 'error');
             return;
         }
 
@@ -96,7 +98,7 @@ export function ShareButton({ product, size = 'md', className, tabIndex }: Share
         } catch (error) {
             // User cancelled - silently fail
             if (error instanceof Error && error.name !== 'AbortError') {
-                addToast('Failed to share', 'error');
+                addToast(t('shareButton.shareFailed'), 'error');
             }
         }
     };
@@ -112,9 +114,9 @@ export function ShareButton({ product, size = 'md', className, tabIndex }: Share
         try {
             // Only copy the URL, not the full share text
             await navigator.clipboard.writeText(shareUrl);
-            addToast('Link copied to clipboard', 'success');
+            addToast(t('shareButton.linkCopied'), 'success');
         } catch {
-            addToast('Failed to copy link', 'error');
+            addToast(t('shareButton.copyFailed'), 'error');
         }
     };
 
@@ -173,7 +175,7 @@ export function ShareButton({ product, size = 'md', className, tabIndex }: Share
             <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => void handleCopyLink()}>
                     <Copy className="mr-2 size-4" />
-                    <span>Copy link</span>
+                    <span>{t('shareButton.copyLink')}</span>
                 </DropdownMenuItem>
                 {shareProviders.length > 0 && (
                     <>

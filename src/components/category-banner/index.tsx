@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import type { ShopperProducts, ShopperSearch } from '@/scapi';
 import { useConfig } from '@salesforce/storefront-next-runtime/config';
 import { toImageUrl } from '@/lib/images/dynamic-image';
+import { useCategoryName } from '@/hooks/use-category-name';
 
 type CategoryRouteData = {
     category: ShopperProducts.schemas['Category'];
@@ -35,6 +36,7 @@ type CategoryRouteData = {
 export default function CategoryBanner() {
     const loaderData = useRouteLoaderData<CategoryRouteData>('routes/_app.category.$categoryId');
     const { t } = useTranslation('category');
+    const localizeCategoryName = useCategoryName();
     const navigation = useNavigation();
     const location = useLocation();
     const config = useConfig();
@@ -96,13 +98,13 @@ export default function CategoryBanner() {
                         {rootCategoryName && (
                             <div className="inline-block mb-4">
                                 <span className="text-xs md:text-sm text-white/80 uppercase tracking-widest font-medium">
-                                    {rootCategoryName}
+                                    {localizeCategoryName(rootCategoryName)}
                                 </span>
                             </div>
                         )}
                         {categoryName && (
                             <p className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-light text-primary-foreground mb-4 tracking-tight leading-tight">
-                                {categoryName}
+                                {localizeCategoryName(categoryName)}
                             </p>
                         )}
                         <div className="text-2xl text-white/90 font-light max-w-xl" aria-live="polite">

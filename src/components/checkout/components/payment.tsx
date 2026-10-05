@@ -473,11 +473,11 @@ export default function Payment({
                                     !billingAddress ||
                                     isSameBillingAndShippingAddress(billingAddress, shippingAddress) ? (
                                         <p className="text-sm font-normal leading-5 text-foreground">
-                                            {`Billing: ${t('payment.sameAsShippingAddress')}`}
+                                            {`${t('payment.billingLabel')} ${t('payment.sameAsShippingAddress')}`}
                                         </p>
                                     ) : (
                                         <div className="text-sm font-normal leading-5 text-foreground">
-                                            <p>Billing:</p>
+                                            <p>{t('payment.billingLabel')}</p>
                                             <p>{formatAddress(billingAddress).nameLine}</p>
                                             <p>{formatAddress(billingAddress).addressLine}</p>
                                         </div>

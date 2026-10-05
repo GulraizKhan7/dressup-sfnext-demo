@@ -1,5 +1,5 @@
 import { Search, User, ChevronDown } from 'lucide-react';
-import { type CSSProperties, Suspense, useEffect, useRef } from 'react';
+import { type CSSProperties, Suspense, useEffect, useMemo, useRef } from 'react';
 import { Await, useRouteLoaderData } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import SearchBar from '@/components/header/search';
@@ -31,17 +31,18 @@ const headerStyle = {
   '--header-menu-icon': MUTED,
 } as CSSProperties;
 
+/** `labelKey` is a `header:categories.*` translation key; `aliases` match the (English) catalog category ids/names. */
 const CATEGORY_LINKS = [
-  { label: 'Men', aliases: ['men', 'mens'] },
-  { label: 'New', aliases: ['new', 'newarrival', 'newarrivals', 'newandnow'] },
-  { label: 'Women', aliases: ['women', 'womens'] },
-  { label: 'Kids', aliases: ['kid', 'kids', 'child', 'children'] },
-  { label: 'Online Exclusive', aliases: ['onlineexclusive', 'onlineexclusives'] },
-  { label: 'Sports', aliases: ['sport', 'sports'] },
-  { label: 'Beauty', aliases: ['beauty', 'selfcare', 'selfcareandbeauty'] },
-  { label: 'Home', aliases: ['home', 'house'] },
-  { label: 'Discount', aliases: ['discount', 'discounts', 'sale', 'clearance'] },
-];
+  { labelKey: 'men', aliases: ['men', 'mens'] },
+  { labelKey: 'new', aliases: ['new', 'newarrival', 'newarrivals', 'newandnow'] },
+  { labelKey: 'women', aliases: ['women', 'womens'] },
+  { labelKey: 'kids', aliases: ['kid', 'kids', 'child', 'children'] },
+  { labelKey: 'onlineExclusive', aliases: ['onlineexclusive', 'onlineexclusives'] },
+  { labelKey: 'sports', aliases: ['sport', 'sports'] },
+  { labelKey: 'beauty', aliases: ['beauty', 'selfcare', 'selfcareandbeauty'] },
+  { labelKey: 'home', aliases: ['home', 'house'] },
+  { labelKey: 'discount', aliases: ['discount', 'discounts', 'sale', 'clearance'] },
+] as const;
 
 const iconStyle = (color: string) => ({ color, stroke: color, fill: 'none', display: 'block' });
  
@@ -96,7 +97,12 @@ export default function Header({
   defer: deferProp,
   embeddedComponent: embeddedComponentProp,
 }: HeaderProps) {
+  const { t } = useTranslation('header');
   const headerRef = useRef<HTMLElement>(null);
+  const categoryLabels = useMemo(
+    () => CATEGORY_LINKS.map(({ labelKey, aliases }) => ({ label: t(`categories.${labelKey}`), aliases })),
+    [t]
+  );
   const appLoaderData = useRouteLoaderData<AppLoaderData>('routes/_app');
   const root = rootProp ?? appLoaderData?.root;
   const defer = deferProp ?? appLoaderData?.subs;
@@ -126,13 +132,13 @@ export default function Header({
         style={{ background: '#000', color: '#fff' }}
       >
         <div className="text-center">
-          Shipping outside of the U.S.?{' '}
+          {t('announcement.text')}{' '}
           <a href="#international-shipping" style={{ color: '#fff', textDecoration: 'underline' }}>
-            Learn About International Shopping
+            {t('announcement.link')}
           </a>
         </div>
         <div className="hidden lg:flex items-center gap-1.5 text-[14px] absolute right-6" style={{ color: '#fff' }}>
-          <span>🇵🇰</span> <span className="font-medium">Pakistan</span>
+          <span>🇵🇰</span> <span className="font-medium">{t('announcement.country')}</span>
         </div>
       </div>
  
@@ -174,7 +180,7 @@ export default function Header({
           resolve={root}
           defer={defer}
           embeddedComponent={embeddedComponent}
-          categoryLabels={CATEGORY_LINKS}
+          categoryLabels={categoryLabels}
         />
       </div>
     </header>

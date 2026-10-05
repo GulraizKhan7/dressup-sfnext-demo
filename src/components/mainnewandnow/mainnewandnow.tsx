@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function MainNewAndNow() {
+  const { t } = useTranslation('home');
   return (
     <section className="w-full max-w-[1900px] mx-auto px-6 lg:px-12 py-12 bg-white font-sans select-none">
 
@@ -11,7 +13,7 @@ export default function MainNewAndNow() {
         <div className="lg:col-span-4 relative group overflow-hidden rounded-lg shadow-sm h-[740px] w-full">
           <img
             src="/images/image7.webp"
-            alt="Fresh Fall Finds Left"
+            alt={t('main.offers.leftImageAlt')}
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           />
         </div>
@@ -19,14 +21,14 @@ export default function MainNewAndNow() {
         {/* Center Content Area (Completely Centered) */}
         <div className="lg:col-span-4 flex flex-col items-center justify-center px-4 text-center">
           <h3 className="text-2xl lg:text-4xl font-bold text-gray-900 mb-3 tracking-tight">
-            Offers for you
+            {t('main.offers.title')}
           </h3>
           <p className="text-xs lg:text-2xl text-gray-600 mb-6 leading-relaxed max-w-md">
-            Find exclusive offers tailored to you across a variety of categories.
+            {t('main.offers.description')}
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <button className="bg-black hover:bg-gray-800 text-white text-xs lg:text-xl font-medium px-7 py-5 rounded transition-all cursor-pointer shadow-sm">
-              Current Offers
+              {t('main.offers.cta')}
             </button>
           </div>
         </div>
@@ -35,7 +37,7 @@ export default function MainNewAndNow() {
         <div className="lg:col-span-4 relative group overflow-hidden rounded-lg shadow-sm h-[740px] w-full">
           <img
             src="/images/image8.webp"
-            alt="Fresh Fall Finds Right"
+            alt={t('main.offers.rightImageAlt')}
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           />
         </div>

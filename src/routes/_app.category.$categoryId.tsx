@@ -48,6 +48,7 @@ import { fetchPageWithComponentData } from '@/lib/page-designer/page-loader.serv
 import { JsonLd } from '@/components/json-ld';
 import { SeoMeta } from '@/components/seo-meta';
 import { useTranslation } from 'react-i18next';
+import { useCategoryName } from '@/hooks/use-category-name';
 import { UITarget } from '@/targets/ui-target';
 import { generateCategorySchema } from '@/utils/category-schema';
 import { getPublicOrigin } from '@/utils/schema-url';
@@ -346,6 +347,7 @@ export default function CategoryPage({
 }) {
     const config = useConfig();
     const { t } = useTranslation();
+    const localizeCategoryName = useCategoryName();
 
     const [filtersOpen, toggleFiltersOpen] = useFiltersPanelState(initialFiltersOpen);
     const limit = config.search.products.hits.limit;
@@ -605,7 +607,7 @@ export default function CategoryPage({
     return (
         <>
             <SeoMeta
-                title={category.name || category.id}
+                title={localizeCategoryName(category.name) || category.id}
                 description={category.pageDescription || category.description}
                 openGraph={{
                     type: 'website',
@@ -710,10 +712,10 @@ export default function CategoryPage({
                                         hasRefinementsPanel={false}
                                         isLoading={isProductGridLoading}
                                         handleProductClick={handleProductClick}
-                                        topCategoryName={
+                                        topCategoryName={localizeCategoryName(
                                             category.parentCategoryTree?.find((p) => p.id !== 'root')?.name ??
-                                            category.name
-                                        }
+                                                category.name
+                                        )}
                                         errorElement={<ProductGridError />}
                                     />
                                 )}
