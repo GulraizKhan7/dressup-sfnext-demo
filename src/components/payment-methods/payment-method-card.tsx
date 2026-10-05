@@ -53,12 +53,12 @@ export function PaymentMethodCard({ paymentMethod, onRemove, onSetDefault }: Pay
     const CardIcon = getCardIcon(displayName);
 
     return (
-        <Card className={`p-6 ${paymentMethod.isDefault ? 'border-primary' : ''}`}>
+        <Card className="p-6 gap-0 [--ui-radius:0px] [--ui-shadow:none] border-border min-h-48">
             <div className="flex items-start justify-between">
                 <div className="flex-1 pr-4">
                     {/* Card Title */}
                     <div className="flex items-center gap-2 mb-2">
-                        <span className="text-base font-medium text-foreground">
+                        <span className="text-sm font-bold text-foreground">
                             {displayName} **** {paymentMethod.last4}
                         </span>
                         {paymentMethod.isDefault && (
@@ -69,26 +69,26 @@ export function PaymentMethodCard({ paymentMethod, onRemove, onSetDefault }: Pay
                     </div>
 
                     {/* Card Details */}
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-xs text-foreground mb-4">
                         {t('paymentMethods.expires')} {paymentMethod.expiryMonth}/{paymentMethod.expiryYear} |{' '}
                         {paymentMethod.cardholderName}
                     </p>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-start gap-3">
                         <Button
                             variant="link"
                             size="sm"
                             disabled={paymentMethod.isDefault}
                             onClick={onSetDefault}
-                            className="h-auto p-0 text-sm cursor-pointer">
+                            className="h-auto p-0 text-xs font-normal underline cursor-pointer">
                             {t('paymentMethods.setDefault')}
                         </Button>
                         <Button
                             variant="link"
                             size="sm"
                             onClick={onRemove}
-                            className="h-auto p-0 text-sm cursor-pointer">
+                            className="h-auto p-0 text-xs font-normal underline cursor-pointer">
                             {t('paymentMethods.remove')}
                         </Button>
                     </div>

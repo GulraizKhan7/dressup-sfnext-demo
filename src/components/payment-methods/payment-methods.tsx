@@ -19,7 +19,7 @@ import { useRevalidator, useFetcher } from 'react-router';
 import type { action as paymentMethodAddAction } from '@/routes/action.payment-method-add';
 import type { action as paymentMethodRemoveAction } from '@/routes/action.payment-method-remove';
 import type { action as paymentMethodSetDefaultAction } from '@/routes/action.payment-method-set-default';
-import { Card, CardContent } from '@/components/ui/card';
+import { AccountPanel } from '@/components/account-panel';
 import { Button } from '@/components/ui/button';
 import { PaymentMethodCard, type PaymentMethod } from './payment-method-card';
 import { RemovePaymentMethodDialog } from './remove-payment-method-dialog';
@@ -158,58 +158,30 @@ export function PaymentMethods({ customer }: PaymentMethodsProps): ReactElement 
     }, [paymentFetcher.state, paymentFetcher.data, addToast, t, revalidator]);
 
     return (
-        <div className="space-y-5">
-            {/* Page Header */}
-            <Card className="bg-card border-border">
-                <CardContent className="px-6 py-3">
-                    <h1 className="text-2xl font-semibold text-foreground mb-1">{t('navigation.paymentMethods')}</h1>
-                    <p className="text-sm text-muted-foreground">{t('paymentMethods.pageSubtitle')}</p>
-                </CardContent>
-            </Card>
-
-            {/* Payment Methods Section */}
+        <AccountPanel>
             <UITarget targetId="sfcc.accountPaymentOptions.payments.savedPaymentMethods">
-                <Card className="p-6">
-                    <div className="flex items-center justify-between pb-6 border-b">
-                        <div>
-                            <h2 className="text-base font-semibold text-foreground mb-1">
-                                {t('navigation.paymentMethods')}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">{t('paymentMethods.subtitle')}</p>
-                        </div>
-                        <Button variant="outline" onClick={handleAddClick}>
-                            {t('paymentMethods.addPaymentMethod')}
-                        </Button>
-                    </div>
+                <h1 className="mb-3 text-lg font-bold text-foreground">{t('navigation.paymentMethods')}</h1>
+                <Button onClick={handleAddClick} variant="outline" size="sm" className="border-foreground font-normal">
+                    {t('paymentMethods.addPaymentMethod')}
+                </Button>
 
-                    <div className="pt-2">
-                        {!hasPaymentMethods ? (
-                            /* Empty State */
-                            <div className="py-8 text-center">
-                                <div className="flex flex-col items-center gap-4">
-                                    <div className="text-muted-foreground">
-                                        <p className="text-sm font-medium">
-                                            {t('paymentMethods.noSavedPaymentMethods')}
-                                        </p>
-                                        <p className="text-sm mt-1">{t('paymentMethods.empty')}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            /* Payment Methods List */
-                            <div className="space-y-6">
-                                {paymentMethods.map((method) => (
-                                    <PaymentMethodCard
-                                        key={method.id}
-                                        paymentMethod={method}
-                                        onRemove={() => handleRemoveClick(method)}
-                                        onSetDefault={() => handleSetDefault(method)}
-                                    />
-                                ))}
-                            </div>
-                        )}
+                {!hasPaymentMethods ? (
+                    <div className="mt-6 text-sm text-foreground">
+                        <p className="font-medium">{t('paymentMethods.noSavedPaymentMethods')}</p>
+                        <p className="mt-1">{t('paymentMethods.empty')}</p>
                     </div>
-                </Card>
+                ) : (
+                    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {paymentMethods.map((method) => (
+                            <PaymentMethodCard
+                                key={method.id}
+                                paymentMethod={method}
+                                onRemove={() => handleRemoveClick(method)}
+                                onSetDefault={() => handleSetDefault(method)}
+                            />
+                        ))}
+                    </div>
+                )}
             </UITarget>
             <UITarget targetId="sfcc.myAccountPaymentMethods.giftCards.manage" />
 
@@ -240,6 +212,6 @@ export function PaymentMethods({ customer }: PaymentMethodsProps): ReactElement 
                     currentIntentRef.current === 'delete'
                 }
             />
-        </div>
+        </AccountPanel>
     );
 }

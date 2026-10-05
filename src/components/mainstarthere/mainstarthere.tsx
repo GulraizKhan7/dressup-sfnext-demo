@@ -82,6 +82,7 @@ export default function MainStartHere({ searchResult }: MainStartHereProps) {
                                                 <ProductTile
                                                     product={product}
                                                     imgAspectRatio={0.8}
+                                                    quickAddLabel={t('featuredProducts.quickView')}
                                                     className="h-full w-full"
                                                 />
                                             </div>

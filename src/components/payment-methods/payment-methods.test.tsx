@@ -65,7 +65,6 @@ describe('PaymentMethods', () => {
         render(<PaymentMethods customer={mockCustomer} />);
 
         expect(screen.getAllByText(t('account:navigation.paymentMethods'))[0]).toBeInTheDocument();
-        expect(screen.getByText(t('account:paymentMethods.pageSubtitle'))).toBeInTheDocument();
     });
 
     test('renders add payment method button', () => {

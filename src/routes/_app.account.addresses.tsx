@@ -17,11 +17,10 @@ import { type ReactElement, Suspense, useState, useEffect, useMemo } from 'react
 import { useOutletContext, Await, useRevalidator } from 'react-router';
 
 // Third-party libraries
-import { Plus } from 'lucide-react';
 import type { ShopperCustomers } from '@/scapi';
 
 // UI components
-import { Card, CardContent } from '@/components/ui/card';
+import { AccountPanel } from '@/components/account-panel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -200,39 +199,25 @@ function AccountAddressesContent({
     const hasAddresses = addresses.length > 0;
 
     return (
-        <div className="space-y-5">
-            {/* Page Header */}
-            <Card className="bg-card border-border">
-                <CardContent className="px-6 py-3">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <h1 className="text-2xl font-semibold text-foreground mb-1">{t('navigation.addresses')}</h1>
-                            <p className="text-sm text-muted-foreground">{t('addresses.subtitle')}</p>
-                        </div>
-                        <Button onClick={handleAdd} className="">
-                            <Plus className="w-4 h-4" />
-                            {t('addresses.addNewAddress')}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+        <AccountPanel>
+            <h1 className="mb-3 text-lg font-bold text-foreground">
+                {t('navigation.shippingAddresses', { defaultValue: 'Shipping Addresses' })}
+            </h1>
+            <Button onClick={handleAdd} variant="outline" size="sm" className="border-foreground font-normal">
+                {t('addresses.addNewAddress')}
+            </Button>
 
             {/* Empty State */}
             {!hasAddresses && (
-                <Card className="p-8 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="text-muted-foreground">
-                            <p className="text-sm font-medium">{t('addresses.noSavedAddresses')}</p>
-                            <p className="text-sm mt-1">{t('addresses.empty')}</p>
-                        </div>
-                    </div>
-                </Card>
+                <div className="mt-6 text-sm text-foreground">
+                    <p className="font-medium">{t('addresses.noSavedAddresses')}</p>
+                    <p className="mt-1">{t('addresses.empty')}</p>
+                </div>
             )}
 
             {/* Addresses Content */}
             {hasAddresses && (
-                <div className="flex flex-col gap-4">
-                    {/* Existing Address Cards */}
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {addresses.map((address) => (
                         <AddressCard
                             key={address.addressId}
@@ -349,7 +334,7 @@ function AccountAddressesContent({
                     }}
                 />
             )}
-        </div>
+        </AccountPanel>
     );
 }
 

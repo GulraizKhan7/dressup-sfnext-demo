@@ -1,118 +1,112 @@
-# Home Page: data flow aur styling
+# Home Page: data flow and styling
 
-Ye file batati hai ke home page (`/`) par data kahan se aata hai, kaun si files use hoti hain, aur styling kaise lagti hai. Saare paths project root `dressup-sfnext-demo/` se hain.
+This document explains how the home page (`/`) gets its data, which files are involved, and how styling is applied. All paths are relative to the project root `dressup-sfnext-demo/`.
 
-## 1. Ek nazar mein
+## 1. Overview
 
 ```
 Browser request "/"
   -> src/routes.ts                         (file-based routes)
-  -> src/root.tsx                          (<html>, theme/index.css load, providers)
-  -> src/routes/_app.tsx                   (layout: Header + <Outlet/> + Footer)
-       loader: categories, header banner, mega menu
+  -> src/root.tsx                          (<html>, theme CSS, providers)
+  -> src/routes/_app.tsx                   (layout loader: categories + mega menu data)
        -> src/routes/_app._index.tsx       (HOME PAGE route)
-            loader: page, searchResult, categories
+            loader: featured products (streamed), SEO urls
 ```
 
-Home page do loaders se data leta hai: pehle `_app.tsx` (layout) ka, phir `_app._index.tsx` (page) ka. Dono server par chalte hain (SSR), browser mein koi `useEffect` fetch nahi hota.
+The home route sets `handle = { customChrome: true }`. That tells the `_app.tsx` layout **not** to render its default header and footer, because the home page renders its own (`Header` and `Footer`) inside the page.
 
-## 2. Data kahan se aata hai
+Everything is loaded on the server (SSR) through route loaders. There is no client-side `useEffect` fetching.
+
+## 2. Where the data comes from
 
 ### 2.1 Layout loader: `src/routes/_app.tsx`
 
-| Data | Function | SCAPI API | Kahan dikhta hai |
+| Data | Function | SCAPI API | Used by |
 |---|---|---|---|
-| Root category + sub categories | `fetchCategory`, `fetchCategoriesByIds` in `src/lib/api/categories.server.ts` | Shopper Products `getCategory` / `getCategories` | Header ka navigation menu (New, Women, Men...) |
-| Header component (announcement) | `fetchComponentWithComponentData({ componentId: 'header' })` in `src/lib/page-designer/component-loader.server.ts` | Shopper Experience (Page Designer) | Header ke upar announcement region |
-| Mega menu component | `fetchComponentWithComponentData({ componentId: 'mega-menu' })` | Shopper Experience | Navigation ka mega menu |
+| Root category and sub categories | `fetchCategory`, `fetchCategoriesByIds` in `src/lib/api/categories.server.ts` | Shopper Products `getCategory` / `getCategories` | The navigation menu in the header |
+| Mega menu component | `fetchComponentWithComponentData({ componentId: 'mega-menu' })` in `src/lib/page-designer/component-loader.server.ts` | Shopper Experience (Page Designer) | Mega menu panels |
 
-Ye loader sirf pehli navigation par chalta hai (`shouldRevalidate() { return false }`), baad ki navigation mein dobara fetch nahi hota.
+This loader only runs on the first navigation (`shouldRevalidate() { return false }`). The home header reads this data with `useRouteLoaderData('routes/_app')`.
 
 ### 2.2 Home loader: `src/routes/_app._index.tsx`
 
-| Loader field | Function | API | Await? | Kahan use hota hai |
-|---|---|---|---|---|
-| `page` | `fetchPageWithComponentData(args, { pageId: 'homepage' })` in `src/lib/page-designer/page-loader.server.ts` | Shopper Experience `getPage` (Page Designer ka page `homepage`) | **Haan** (critical) | `<Region regionId="headerbanner">` aur `<Region regionId="main">` |
-| `searchResult` | `fetchCarouselProducts(...)` in `src/components/product-carousel/loaders.ts` -> `fetchSearchProducts` in `src/lib/api/search.server.ts` | Shopper Search `productSearch` (`cgid=root`, limit = `pages.home.featuredProductsCount` = 12, current currency) | Nahi (promise stream hota hai) | Featured Products carousel |
-| `categories` | `fetchCategories(context, 'root', 1)` | Shopper Products `getCategories` | Nahi | Popular Categories section |
-| `pageUrl`, `ogImageUrl` | `buildCanonicalUrl`, `hero01` | Local | n/a | SEO (`SeoMeta`) |
+| Loader field | Source | Awaited? | Used by |
+|---|---|---|---|
+| `searchResult` | `fetchCarouselProducts(...)` in `src/components/product-carousel/loaders.ts`, which calls `fetchSearchProducts` in `src/lib/api/search.server.ts` (category `root`, limit `pages.home.featuredProductsCount` = 12, current currency) | No, the Promise is streamed | `StartsHere` (the "Featured Products" section) |
+| `pageUrl` | `buildCanonicalUrl` in `src/utils/canonical-url.ts` | n/a | SEO (`SeoMeta`) |
+| `ogImageUrl` | `/images/hero.webp` | n/a | Open Graph image |
 
-Rules jo CLAUDE.md se follow hote hain: critical data (page) `await` hota hai, baaki promise ke taur par stream hota hai taake page jaldi dikhe.
+The loader also redirects a bare `/` to the default site/locale prefixed home page (for example `/us/en-US/`).
 
-Revalidation: `src/lib/revalidation/routes/home.ts`. Add-to-cart jaise mutation ke baad home loader dobara nahi chalta; sirf currency badalne, shopper-context update, ya login/logout par chalta hai.
+Following the project rules in `CLAUDE.md`, nothing non-critical blocks the loader: the products are returned as an unresolved Promise and the page renders with a skeleton until they arrive.
 
-## 3. Page par kya render hota hai (upar se neeche)
+Revalidation is defined in `src/lib/revalidation/routes/home.ts`.
 
-`HomePage` component `src/routes/_app._index.tsx` mein hai. Page Designer ke 2 regions hain, aur har region ke `errorElement` mein **fallback content** hai jo tab dikhta hai jab Page Designer mein koi component set na ho.
+## 3. What is rendered (top to bottom)
+
+`HomePage` in `src/routes/_app._index.tsx`:
 
 ```
-<Header>                                 src/components/header/index.tsx
-  announcement region (Page Designer)
-  city selector strip                    src/components/delivery-promise/city-selector.tsx
-  Logo | Navigation | Search | Icons
-<main>
-  <Region headerbanner critical>         src/components/region/index.tsx
-     fallback: <HeroCarousel>            src/components/hero-carousel/index.tsx
-               <ProductCarouselWithData> src/components/product-carousel/carousel.tsx
-                    -> ProductTile       src/components/product-tile/index.tsx
-                         -> ProductAvailabilitySummary (delivery date)
-  <Region main>
-     fallback: <PopularCategories>       src/components/home/popular-categories/
-                    -> PopularCategory   src/components/home/popular-category/
-               <ContentCard> x2          src/components/content-card/index.tsx  (Women, Men)
-               <ContentCard> text-only   ("Style for Real Life")
-<Footer>                                 src/components/footer/
+<SeoMeta>
+<Header>            src/components/mainheader/mainheader.tsx
+                      - logo, search, city selector, sign in, CartBadge (real basket count + mini cart)
+                      - category navigation (ResponsiveNavigationMenu)
+<HeroCarousel>      src/components/mainherocarousel/mainherocarousel.tsx
+<StartsHere>        src/components/mainstarthere/mainstarthere.tsx
+                      - "Featured Products": first 6 products as ProductTile cards + "All Products" button
+<NewAndNow>         src/components/mainnewandnow/mainnewandnow.tsx      (static content)
+<Brands>            src/components/mainbrands/mainbrands.tsx            (static content)
+<DressUp>           src/components/maindressup/maindressup.tsx          (static content)
+<BagSection>        src/components/mainbagsection/mainbagsection.tsx    (static content)
+<Wordrobe>          src/components/mainwordrobe/wordrobe.tsx            (static content)
+<Footer>            src/components/footer/index.tsx -> main-footer.tsx
+                      - email sign-up, link columns, language / currency switchers, legal row
 ```
 
-### Page Designer vs fallback
-
-- Agar Salesforce Page Designer mein `homepage` page par components lage hain, to `<Region>` wahi dikhata hai (har component `src/components/**` mein `@Component(...)` decorator wala hota hai, jaise `hero-carousel`, `product-carousel`, `popular-categories`, `content-card`).
-- Agar region khali ho ya page na mile, to `errorElement` ke andar likha hua hard-coded fallback render hota hai. Abhi screenshot mein jo dikh raha hai wo aksar yahi fallback hota hai.
-- Hero slides ke images: `public/images/hero-01.webp` se `hero-04.webp` (import `/images/hero-0X.webp`). Text translation se aata hai.
+Notes:
+- Only the **Featured Products** section uses live catalog data. The other sections are static design content (images from `public/images/`, text in the components).
+- Each product card is the shared `ProductTile` (`src/components/product-tile/index.tsx`), so price, image, link, quick add and the delivery date (`src/components/delivery-promise/availability-summary.tsx`) come from the real catalog and the shopper's selected city.
+- The "All Products" button links to `/category/root`.
+- The `Footer` includes the language and currency switchers (`src/components/footer/switchers.tsx`).
 
 ### Text (i18n)
+Home text uses `useTranslation('home')`. Translations live in `src/locales/<locale>/translations.json` under the `home` key (for example `featuredProducts.title`, `featuredProducts.allProducts`).
 
-Home ka saara text `useTranslation('home')` se aata hai. Translations `src/locales/<locale>/translations.json` mein `home` key ke andar hain (en-US, en-GB, ka-GE...). Keys jaise `hero.slide1.title`, `featuredProducts.title`, `featuredContent.women.title`.
+## 4. How styling is applied
 
-## 4. Styling kaise lagti hai
+### 4.1 Where the CSS is loaded
+`src/root.tsx` links `src/theme/index.css`, which imports, in order:
 
-### 4.1 Kahan se load hoti hai
-
-`src/root.tsx` `@/theme/index.css` ko link karta hai. `src/theme/index.css` in files ko order se import karta hai:
-
-| File | Kaam |
+| File | Purpose |
 |---|---|
-| `tailwind.css` | Tailwind theme bridge: CSS variables ko utilities banata hai (`bg-background`, `text-foreground`, `rounded-ui`...), aur font `--font-sans: 'Sen', ...` |
-| `tokens/core.css` | Asli colors: `--background`, `--foreground`, `--primary`, `--secondary`, `--muted`, `--accent`, status colors |
-| `tokens/brand.css` | Market Street brand colors (`--brand-black`, `--brand-white-bone`...) aur hero overlay gradients |
-| `tokens/header.css`, `sidebar.css`, `components.css`, `custom.css`, `status.css`, `swatch.css`, `agentic.css` | Alag alag hisson ke tokens |
+| `tailwind.css` | Tailwind theme bridge: turns CSS variables into utilities (`bg-background`, `text-foreground`, `rounded-ui`, ...) and defines the font `--font-sans: 'Sen', ...` |
+| `tokens/core.css` | The real colors: `--background`, `--foreground`, `--primary`, `--secondary`, `--muted`, `--accent`, status colors |
+| `tokens/brand.css` | Brand palette (`--brand-black`, `--brand-white-bone`, ...) and hero overlay gradients |
+| `tokens/header.css`, `sidebar.css`, `components.css`, `custom.css`, `status.css`, `swatch.css`, `agentic.css` | Tokens for specific areas |
 | `animations.css` | Keyframes |
-| `base.css` | Global base: `@font-face` (Sen, `public/fonts/sen-variable.woff2`), `body` background/text/font, `.section-container`, focus/cursor rules |
-| `overrides/*.css` | `navigation.css`, `sonner.css`, `cart-sheet.css`, `store-locator.css`: specific components ke overrides |
+| `base.css` | Global base layer: `@font-face` for Sen (`public/fonts/sen-variable.woff2`), `body` background / text / font, `.section-container`, focus and cursor rules |
+| `overrides/*.css` | Component overrides: `navigation.css`, `sonner.css`, `cart-sheet.css`, `store-locator.css` |
 
-### 4.2 Components par kaise lagti hai
+### 4.2 How components are styled
+- **Tailwind utility classes** directly in JSX, for example `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6` for the featured products grid.
+- **Design tokens, not hard-coded colors:** `bg-background`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`. To change a color, change the variable in `tokens/core.css` or `tokens/brand.css`. The `custom/color-linter` lint rule rejects hard-coded color utilities such as `bg-white`.
+- **Shape tokens:** `rounded-ui`, `shadow-ui`, `border-ui`. Override the source variables (`--ui-radius`, `--ui-shadow`, `--ui-border-width`), never the bridge variables. See `docs/README-SHAPE-TOKENS.md`.
+- **`.section-container`** (`base.css`): the page content width, `px-4 sm:px-8 lg:px-16 max-w-screen-2xl mx-auto`.
+- **`cn()`** from `src/lib/utils` merges class names conditionally.
+- **Breakpoints:** `sm`, `md`, `lg`, `xl`, `2xl`.
+- **Header colors** come from `tokens/header.css` and the inline CSS variables set on the home header (`--header-background`, `--header-foreground`, ...).
+- **Skeletons:** the featured products section reserves space with `Skeleton` blocks while the Promise resolves, to avoid layout shift.
 
-- **Tailwind utility classes** direct JSX mein, jaise `pb-16 -mt-8` (home wrapper), `grid grid-cols-1 md:grid-cols-2 gap-6` (Women/Men cards).
-- **Design tokens**, hard-coded color nahi: `bg-background`, `text-foreground`, `text-muted-foreground`, `bg-muted`, `text-primary-foreground`. Color badalna ho to `tokens/core.css` / `tokens/brand.css` mein variable badlen.
-- **Shape tokens**: `rounded-ui`, `shadow-ui`, `border-ui` (Card, Button, Input...). Inhe override karne ke liye source variable `--ui-radius`, `--ui-shadow`, `--ui-border-width` badlen, bridge variable (`--radius-ui`) nahi. Detail: `docs/README-SHAPE-TOKENS.md`.
-- **`.section-container`** (`base.css`): page ki content width: `px-4 sm:px-8 lg:px-16 max-w-screen-2xl mx-auto`. Hero ke dots/buttons, content cards aur header sab isi ke andar hain, is liye sab ek line mein aligned rehte hain.
-- **`cn()`** (`src/lib/utils`) class names merge karta hai (conditional classes ke liye).
-- **Breakpoints**: `sm`, `md`, `lg`, `xl`, `2xl`. Misal: hero height `h-[400px] md:h-[500px] lg:h-[600px]` (`hero-carousel/index.tsx`).
-- **Hero text legibility**: `--hero-overlay-dark/light` gradients (`brand.css`) image aur text ke beech lagte hain.
-- **Header**: colors `tokens/header.css` se (`bg-header-background`, `text-header-foreground`), sticky `top-0 z-50`.
-- **ContentCard**: `showBackground`, `showBorder`, `cardFooterClassName`, `cardDescriptionClassName` props se look badalta hai; "Style for Real Life" card mein `[&_h3]:text-3xl ...` arbitrary selectors se heading/paragraph styling hoti hai.
-- **Page Designer design mode** mein hi `@salesforce/storefront-next-runtime/design/styles.css` load hoti hai (`src/page-designer-init.tsx`).
+## 5. Where to change things
 
-## 5. Kuch badalna ho to kahan jayen
-
-| Kaam | File |
+| Task | File |
 |---|---|
-| Featured products ki tadaad | `config.server.ts` -> `pages.home.featuredProductsCount` |
-| Hero slides ka text | `src/locales/<locale>/translations.json` -> `home.hero.*` |
-| Hero images | `public/images/hero-0X.webp` aur `HomePage` mein `heroSlides` |
-| Featured products kis category se | `_app._index.tsx` -> `fetchCarouselProducts({ categoryId: 'root' })` |
-| Popular categories ka parent | `fetchCategories(context, 'root', 1)` |
-| Font | `src/theme/base.css` (`@font-face`) aur `tailwind.css` (`--font-sans`) |
-| Colors | `src/theme/tokens/core.css`, `brand.css` |
-| Page Designer se content badalna | Business Manager -> Page Designer -> page `homepage` (regions `headerbanner`, `main`) |
-| Navigation categories | Business Manager catalog; depth `config.server.ts` -> `pages.navigation` |
+| Number of featured products fetched | `config.server.ts` -> `pages.home.featuredProductsCount` |
+| How many are shown in the section | `FEATURED_COUNT` in `src/components/mainstarthere/mainstarthere.tsx` |
+| Which category the featured products come from | `src/routes/_app._index.tsx` -> `fetchCarouselProducts({ categoryId: 'root' })` |
+| Section title / button text | `src/locales/<locale>/translations.json` -> `home.featuredProducts.*` |
+| Section order | `HomePage` in `src/routes/_app._index.tsx` |
+| Static section content | The matching `src/components/main*/` component |
+| Font | `src/theme/base.css` (`@font-face`) and `src/theme/tailwind.css` (`--font-sans`) |
+| Colors | `src/theme/tokens/core.css`, `src/theme/tokens/brand.css` |
+| Navigation categories | Business Manager catalog; depth in `config.server.ts` -> `pages.navigation` |

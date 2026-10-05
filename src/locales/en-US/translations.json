@@ -1415,6 +1415,7 @@
             "title": "Featured Products",
             "shopAll": "Shop all",
             "allProducts": "All Products",
+            "quickView": "Quick View",
             "loadFailed": "Unable to load featured products."
         },
         "categoryGrid": {
