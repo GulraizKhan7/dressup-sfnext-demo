@@ -1,10 +1,13 @@
 import { Search, User, ChevronDown } from 'lucide-react';
 import { type CSSProperties, useEffect, useRef } from 'react';
 import { useRouteLoaderData } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import SearchBar from '@/components/header/search';
 import ResponsiveNavigationMenu from '@/components/navigation-menu-mega';
 import { CitySelector } from '@/components/delivery-promise/city-selector';
 import CartBadge from '@/components/header/cart-badge';
+import { UserMenu } from '@/components/header/user-actions/user-menu';
+import { useAuth } from '@/providers/auth';
 import type { LoaderData as AppLoaderData } from '@/routes/_app';
  
 const INK = '#111111';
@@ -41,6 +44,37 @@ const CATEGORY_LINKS = [
 
 const iconStyle = (color: string) => ({ color, stroke: color, fill: 'none', display: 'block' });
  
+/**
+ * Account trigger: opens the shared user menu (Sign In / Create account for guests, account links and Log out for
+ * registered shoppers). Uses the site-aware routes instead of a hard-coded href.
+ */
+function HeaderUserMenu() {
+  const session = useAuth();
+  const { t } = useTranslation('header');
+  const { t: tAccount } = useTranslation('account');
+  const isAuthenticated = session?.userType === 'registered';
+  const label = isAuthenticated ? tAccount('myAccount') : t('signIn');
+
+  return (
+    <UserMenu
+      isAuthenticated={isAuthenticated}
+      trigger={
+        <button
+          type="button"
+          className="flex cursor-pointer items-center gap-1"
+          style={{ color: INK }}
+          aria-label={label}
+          data-testid="user-account-trigger"
+        >
+          <User size={22} strokeWidth={1.5} style={iconStyle(INK)} />
+          <span className="text-[14px] font-medium hidden md:inline">{label}</span>
+          <ChevronDown size={14} className="hidden md:inline" style={iconStyle(MUTED)} />
+        </button>
+      }
+    />
+  );
+}
+
 type HeaderProps = {
   root?: AppLoaderData['root'];
   defer?: AppLoaderData['subs'];
@@ -108,15 +142,7 @@ export default function Header({
  
         <div className="flex items-center gap-5 lg:gap-8 flex-shrink-0">
           <CitySelector className="hidden md:flex" />
-          <a
-            href="/account/login"
-            className="flex items-center gap-1"
-            style={{ color: INK, textDecoration: 'none' }}
-          >
-            <User size={22} strokeWidth={1.5} style={iconStyle(INK)} />
-            <span className="text-[14px] font-medium hidden md:inline">Sign In</span>
-            <ChevronDown size={14} className="hidden md:inline" style={iconStyle(MUTED)} />
-          </a>
+          <HeaderUserMenu />
  
           {/* Real basket count + mini cart (opens after add to cart) */}
           <CartBadge />
