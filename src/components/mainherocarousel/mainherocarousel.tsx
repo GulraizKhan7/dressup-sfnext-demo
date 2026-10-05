@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const slides = [
   { id: 1, key: 'slide1', image: "/images/hero.webp" },
-  { id: 2, key: 'slide2', image: "/images/hero.webp" },
+  { id: 2, key: 'slide2', image: "/images/web-banner.webp" },
   { id: 3, key: 'slide3', image: "/images/hero.webp" },
-  { id: 4, key: 'slide4', image: "/images/hero.webp" }
+  { id: 4, key: 'slide4', image: "/images/wordrobe1.webp" }
 ] as const;
 
 export default function HeroCarousel() {

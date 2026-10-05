@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Facebook, Instagram, Youtube, Linkedin, Disc as Tiktok } from 'lucide-react';
 import Switchers from '@/components/footer/switchers';
 
-const LINK_CLASS_NAME = 'text-base text-gray-600 hover:text-black transition-colors';
-const HEADING_CLASS_NAME = 'font-bold text-gray-900 text-base lg:text-lg tracking-wide mb-3 uppercase';
+const LINK_CLASS_NAME = 'text-[18px] text-gray-600 hover:text-black transition-colors';
+const HEADING_CLASS_NAME = 'font-bold text-gray-900 text-[18px] tracking-wide mb-3 uppercase';
 
 const HELP_LINKS = [
   'registration',
@@ -30,7 +30,7 @@ const COMPANY_LINKS = ['about', 'history', 'stores', 'exchangeStores', 'blog'] a
 export default function MainFooter() {
   const { t } = useTranslation('footer');
   return (
-    <footer className="w-full bg-[#FAFAFA] border-t border-gray-200 pt-20 pb-16 font-sans select-none text-gray-800">
+    <footer className="w-full bg-[#FAFAFA] border-t border-gray-200 pt-20 pb-16 font-sans select-none text-gray-800 [&_select]:!text-[18px]">
       <div className="max-w-[1600px] mx-auto px-6 lg:px-16">
 
         {/* 4 Columns Layout with comfortable spacing */}
@@ -70,8 +70,8 @@ export default function MainFooter() {
           <div className="flex flex-col space-y-6">
             <div>
               <h3 className={HEADING_CLASS_NAME}>{t('main.contact.title')}</h3>
-              <p className="text-base text-gray-900 font-semibold mb-1.5">(+995) 032 2 38 48 68</p>
-              <p className="text-sm text-gray-600 break-all leading-relaxed">info@dressup.ge | corporate@dressup.ge</p>
+              <p className="text-[18px] text-gray-900 font-semibold mb-1.5">(+995) 032 2 38 48 68</p>
+              <p className="text-[18px] text-gray-600 break-all leading-relaxed">info@dressup.ge | corporate@dressup.ge</p>
             </div>
 
             {/* Social Media Icons */}
@@ -95,7 +95,7 @@ export default function MainFooter() {
 
             {/* App Download Section */}
             <div className="pt-2">
-              <h4 className="font-bold text-gray-900 text-sm lg:text-base tracking-wide mb-3 uppercase">
+              <h4 className="font-bold text-gray-900 text-[18px] tracking-wide mb-3 uppercase">
                 {t('main.apps.title')}
               </h4>
               <div className="flex flex-col sm:flex-row lg:flex-col gap-3">

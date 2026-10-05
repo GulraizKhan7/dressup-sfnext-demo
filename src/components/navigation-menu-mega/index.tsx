@@ -214,29 +214,6 @@ function MegaMenuFeaturedSlot({
     return renderResolved(embeddedComponent);
 }
 
-function ShopAllCategoryLink({ category }: { category: ShopperProducts.schemas['Category'] }): ReactElement {
-    const { t } = useTranslation('header');
-    const categoryName = useCategoryName();
-    const localizedName = categoryName(category.name);
-    return (
-        <NavigationMenuLink asChild>
-            <NavLink
-                to={routeHref(routes.category, { categoryId: category.id })}
-                // When the panel has a featured column it is a 2-col grid whose other
-                // children are the submenu list and the banner/region aside. Span both
-                // columns so this link sits on its own row above them and the list and
-                // banner stay side by side. On panels with no featured column the
-                // container is not a grid, so col-span is inert.
-                className="block md:col-span-2 text-sm font-medium leading-5 underline underline-offset-4 hover:!bg-transparent focus:!bg-transparent hover:!text-header-menu-foreground/60 focus:!text-header-menu-foreground/60 transition-colors">
-                {t('shopAllCategory', {
-                    category: localizedName,
-                    defaultValue: `Shop all ${localizedName}`,
-                })}
-            </NavLink>
-        </NavigationMenuLink>
-    );
-}
-
 function hasSubcategories(category: ShopperProducts.schemas['Category']): boolean {
     return (
         typeof category.onlineSubCategoriesCount === 'number' &&
@@ -462,7 +439,11 @@ export default function ResponsiveNavigationMenu({
             // through the panel's links and banner.
             return {
                 className: cn(
-                    'text-sm leading-5',
+                    isGroupHeading
+                        ? '!w-full !justify-self-start !text-left !text-[16px] leading-5'
+                        : isSubcategory
+                          ? '!justify-start !text-left text-base leading-5'
+                          : 'text-sm leading-5',
                     isGroupHeading ? 'font-semibold' : 'font-normal',
                     categoryLabels && isSubcategory && 'px-0 py-1',
                     isSubcategory &&
@@ -569,12 +550,13 @@ export default function ResponsiveNavigationMenu({
                                 propsList={({ parent, categories: subCategories, level }) => {
                                     if (categoryLabels && level === 1) {
                                         return {
-                                            className: 'grid grid-cols-2 gap-x-8 gap-y-5 p-0 md:grid-cols-4',
+                                            className:
+                                                'mx-auto grid w-full max-w-6xl grid-cols-2 justify-items-center gap-x-8 gap-y-5 p-0 text-center md:grid-cols-4',
                                         };
                                     }
                                     if (categoryLabels && level > 1) {
                                         return {
-                                            className: 'mt-1 flex flex-col gap-1 p-0',
+                                            className: 'mt-1 flex flex-col items-stretch gap-1 p-0 text-left',
                                         };
                                     }
                                     if (level === 1) {
@@ -594,18 +576,16 @@ export default function ResponsiveNavigationMenu({
                                     }
                                 }}
                                 propsListItem={({ level }) =>
-                                    categoryLabels && level >= 1 ? { className: 'min-w-0 list-none' } : undefined
+                                    categoryLabels && level >= 1
+                                        ? {
+                                              className: cn(
+                                                  'min-w-0 list-none',
+                                                  level === 1 && 'flex w-full flex-col justify-self-start'
+                                              ),
+                                          }
+                                        : undefined
                                 }
                                 propsElement={getElementProps}
-                                renderSlotListBefore={({ level, parent }) => {
-                                    // The top-level trigger only opens the panel (it never
-                                    // navigates, per WCAG 3.2.2). Give every panel an explicit
-                                    // link to the parent category's landing page so it stays
-                                    // reachable whether or not the category has a banner.
-                                    if (level === 1 && parent) {
-                                        return <ShopAllCategoryLink category={parent} />;
-                                    }
-                                }}
                                 renderSlotListAfter={({ level, parent }) => {
                                     if (level !== 1 || !parent) return null;
                                     // The dropdown renders multiple complementary landmarks (one per open
