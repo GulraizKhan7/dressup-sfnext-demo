@@ -11,7 +11,7 @@ const slides = [
   {
     id: 2,
     title: "Modern Heritage Collection",
-   image: "/images/hero.webp",
+   image: "/images/web-banner.webp",
     tags: ["New Arrival", "Fall Prep"]
   },
   {
@@ -23,7 +23,7 @@ const slides = [
   {
     id: 4,
     title: "Signature Tailored Styles",
-    image: "/images/hero.webp",
+    image: "/images/wordrobe1.webp",
     tags: ["Designer", "Exclusive"]
   }
 ];

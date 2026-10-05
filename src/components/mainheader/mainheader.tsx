@@ -131,7 +131,7 @@ export default function Header({
  
       {/* 3. Sub Navigation */}
       <div
-        className="w-full px-4 md:px-8 lg:px-16 [&_[data-slot=navigation-menu]]:w-full [&_[data-slot=navigation-menu]]:max-w-none [&_[data-slot=navigation-menu-list]]:w-full [&_[data-slot=navigation-menu-list]]:justify-around"
+        className="w-full px-4 md:px-8 lg:px-26 py-4 [&_[data-slot=navigation-menu]]:w-full [&_[data-slot=navigation-menu]]:max-w-none [&_[data-slot=navigation-menu-list]]:w-full [&_[data-slot=navigation-menu-list]]:justify-around [&_[data-slot=navigation-menu-list]]:gap-12 [&_[data-slot=navigation-menu-list]>[data-slot=navigation-menu-item]>[data-slot=navigation-menu-trigger]]:text-[16px] [&_[data-slot=navigation-menu-list]>[data-slot=navigation-menu-item]>[data-slot=navigation-menu-link]]:text-[16px]"
         style={{ borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}
       >
         <ResponsiveNavigationMenu
