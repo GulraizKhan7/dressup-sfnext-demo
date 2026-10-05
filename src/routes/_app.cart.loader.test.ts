@@ -42,8 +42,12 @@ vi.mock('@/middlewares/auth.server', () => ({
     getAuth: vi.fn(() => ({ customerId: null })),
 }));
 
-vi.mock('@/lib/product/recommendations.server', () => ({
-    fetchProductRecommendations: vi.fn(),
+vi.mock('@/lib/api/search.server', () => ({
+    fetchSearchProducts: vi.fn(),
+}));
+
+vi.mock('@/lib/api/products.server', () => ({
+    fetchProductsByIds: vi.fn(),
 }));
 
 // Per-page UI flags. Default to the canonical value (recommendations on); the
@@ -64,9 +68,10 @@ vi.mock('@/extensions/bopis/lib/api/stores.server', () => ({
 
 import { getBasket, getBasketSnapshot } from '@/middlewares/basket.server';
 import { fetchProductsInBasket } from '@/lib/cart/basket-products.server';
+import { fetchProductsByIds } from '@/lib/api/products.server';
 import { fetchPromotionsForBasket } from '@/lib/cart/basket-promotions.server';
 import { fetchWishlistProductIdsForCart } from '@/lib/cart/cart-wishlist.server';
-import { fetchProductRecommendations } from '@/lib/product/recommendations.server';
+import { fetchSearchProducts } from '@/lib/api/search.server';
 import { fetchRuleBasedBonusProductsForBasket } from '@/lib/cart/rule-based-bonus.server';
 import { uiConfig } from '@/lib/config.ui';
 // @sfdc-extension-block-start SFDC_EXT_BOPIS
@@ -101,12 +106,14 @@ describe('Cart route loader', () => {
             lastModified: '',
         });
         vi.mocked(fetchProductsInBasket).mockResolvedValue({
-            productsByItemId: { 'item-1': { id: 'product-1' } as any },
+            productsByItemId: {
+                'item-1': { id: 'product-1', primaryCategoryId: 'shirts' } as any,
+            },
             bonusProductsById: {},
         });
         vi.mocked(fetchPromotionsForBasket).mockResolvedValue({});
         vi.mocked(fetchWishlistProductIdsForCart).mockResolvedValue([]);
-        vi.mocked(fetchProductRecommendations).mockResolvedValue({ recs: [] });
+        vi.mocked(fetchSearchProducts).mockResolvedValue({ hits: [] } as any);
         vi.mocked(fetchRuleBasedBonusProductsForBasket).mockResolvedValue({});
         // @sfdc-extension-block-start SFDC_EXT_BOPIS
         vi.mocked(fetchStoresForBasket).mockResolvedValue(new Map());
@@ -128,22 +135,14 @@ describe('Cart route loader', () => {
         expect(result.pageUrl).toContain('/cart');
     });
 
-    test('skips the Einstein recommendation fetches when recommendations are disabled', async () => {
+    test('skips the category product search when recommendations are disabled', async () => {
         uiConfig.pages.cart.showRecommendations = false;
 
         const result = loader(createLoaderArgs()) as any;
 
-        await expect(result.cartMayAlsoLikePromise).resolves.toEqual({});
-        await expect(result.cartRecentlyViewedPromise).resolves.toEqual({});
-        expect(fetchProductRecommendations).not.toHaveBeenCalled();
-    });
-
-    test('issues the Einstein recommendation fetches when recommendations are enabled', async () => {
-        const result = loader(createLoaderArgs()) as any;
-        await result.cartMayAlsoLikePromise;
-        await result.cartRecentlyViewedPromise;
-
-        expect(fetchProductRecommendations).toHaveBeenCalled();
+        await expect(result.cartMayAlsoLikePromise).resolves.toEqual([]);
+        await expect(result.cartMoreFromCategoriesPromise).resolves.toEqual([]);
+        expect(fetchSearchProducts).not.toHaveBeenCalled();
     });
 
     test('basketDataPromise resolves to basket, products, promotions, and stores (no wishlist)', async () => {
@@ -159,7 +158,9 @@ describe('Cart route loader', () => {
         // @sfdc-extension-block-end SFDC_EXT_BOPIS
         expect(data).not.toHaveProperty('wishlistProductIds');
         expect(data.basket).toEqual(mockBasket);
-        expect(data.productsByItemId).toEqual({ 'item-1': { id: 'product-1' } });
+        expect(data.productsByItemId).toEqual({
+            'item-1': { id: 'product-1', primaryCategoryId: 'shirts' },
+        });
         expect(data.bonusProductsById).toEqual({});
         expect(data.promotions).toEqual({});
         // @sfdc-extension-block-start SFDC_EXT_BOPIS
@@ -213,59 +214,118 @@ describe('Cart route loader', () => {
         await expect(result.basketDataPromise).rejects.toThrow('Network failure');
     });
 
-    test('defers two recommendation promises and forwards request', async () => {
+    test('defers two recommendation promises that resolve to product arrays', async () => {
         const result = loader(createLoaderArgs()) as any;
 
         expect(result.cartMayAlsoLikePromise).toBeInstanceOf(Promise);
-        expect(result.cartRecentlyViewedPromise).toBeInstanceOf(Promise);
-
-        // CART_RECENTLY_VIEWED fires immediately (no basket dependency).
-        // CART_MAY_ALSO_LIKE chains off basketDataPromise — it only fires once that resolves.
-        await result.basketDataPromise;
-        await result.cartMayAlsoLikePromise;
-        await result.cartRecentlyViewedPromise;
-
-        const fetchEnriched = vi.mocked(fetchProductRecommendations);
-        expect(fetchEnriched).toHaveBeenCalledTimes(2);
-
-        const mayAlsoLikeCall = fetchEnriched.mock.calls.find(
-            ([, opts]) => (opts as { name: string }).name === 'product-to-product-einstein'
-        );
-        expect(mayAlsoLikeCall).toBeDefined();
-        const mayAlsoLikeOpts = mayAlsoLikeCall?.[1] as { products?: unknown[] } | undefined;
-        expect(mayAlsoLikeOpts?.products?.length).toBeGreaterThanOrEqual(1);
+        expect(result.cartMoreFromCategoriesPromise).toBeInstanceOf(Promise);
+        await expect(result.cartMayAlsoLikePromise).resolves.toEqual([]);
+        await expect(result.cartMoreFromCategoriesPromise).resolves.toEqual([]);
     });
 
-    test('passes a deduplicated products array to CART_MAY_ALSO_LIKE', async () => {
-        // Two cart lines mapping to the same parent productId would double-count in Einstein
-        // if the loader passed `Object.values(productsByItemId)` directly. The loader's rec
-        // chain dedups by `product.id` before invoking `fetchProductRecommendations`.
-        const sharedProduct = { id: 'p-1', name: 'Shirt' } as any;
+    test('only suggests orderable products', async () => {
+        vi.mocked(fetchSearchProducts).mockResolvedValue({
+            hits: [
+                { productId: 'in-stock', orderable: true },
+                { productId: 'unspecified' },
+                { productId: 'sold-out', orderable: false },
+            ],
+            total: 3,
+        } as any);
+
+        const result = loader(createLoaderArgs()) as any;
+        const [first, second] = await Promise.all([
+            result.cartMayAlsoLikePromise,
+            result.cartMoreFromCategoriesPromise,
+        ]);
+
+        expect([...first, ...second].map((product) => product.productId).sort()).toEqual(['in-stock', 'unspecified']);
+    });
+
+    test('loads other products from the category of the cart products (first page), without the cart products', async () => {
+        const firstPage = Array.from({ length: 24 }, (_, index) => ({
+            productId: index === 0 ? 'product-1' : `category-product-${index}`,
+        }));
+        vi.mocked(fetchSearchProducts).mockResolvedValue({ hits: firstPage, total: 60 } as any);
+
+        const result = loader(createLoaderArgs()) as any;
+        const [mayAlsoLike, moreFromCategories] = await Promise.all([
+            result.cartMayAlsoLikePromise,
+            result.cartMoreFromCategoriesPromise,
+        ]);
+        const displayedProducts = [...mayAlsoLike, ...moreFromCategories];
+        // 23 products: the 24 hits minus the product that is already in the cart.
+        expect(displayedProducts).toHaveLength(23);
+        expect(new Set(displayedProducts.map((product) => product.productId)).size).toBe(23);
+        expect(displayedProducts.some((product) => product.productId === 'product-1')).toBe(false);
+        expect(fetchSearchProducts).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ refine: ['cgid=shirts'], limit: 24 })
+        );
+        // Only the first page is fetched, no matter how many products the category holds.
+        expect(fetchSearchProducts).toHaveBeenCalledTimes(1);
+    });
+
+    test('resolves the category from the master product when the cart line is a variant', async () => {
         vi.mocked(fetchProductsInBasket).mockResolvedValue({
             productsByItemId: {
-                'i-1': sharedProduct,
-                'i-2': sharedProduct,
+                'item-1': { id: 'product-1-XS', master: { masterId: 'product-1' } } as any,
             },
             bonusProductsById: {},
         });
+        vi.mocked(fetchProductsByIds).mockResolvedValue([{ id: 'product-1', primaryCategoryId: 'shirts' } as any]);
+        vi.mocked(fetchSearchProducts).mockResolvedValue({
+            hits: [{ productId: 'other-1' }, { productId: 'other-2' }],
+            total: 2,
+        } as any);
 
         const result = loader(createLoaderArgs()) as any;
-        await result.basketDataPromise;
-        await result.cartMayAlsoLikePromise;
+        const [mayAlsoLike, moreFromCategories] = await Promise.all([
+            result.cartMayAlsoLikePromise,
+            result.cartMoreFromCategoriesPromise,
+        ]);
 
-        const fetchEnriched = vi.mocked(fetchProductRecommendations);
-        const mayAlsoLikeCall = fetchEnriched.mock.calls.find(
-            ([, opts]) => (opts as { name: string }).name === 'product-to-product-einstein'
+        expect(fetchProductsByIds).toHaveBeenCalledWith(expect.anything(), ['product-1'], expect.anything());
+        expect(fetchSearchProducts).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ refine: ['cgid=shirts'] })
         );
-        const mayAlsoLikeOpts = mayAlsoLikeCall?.[1] as { products?: { id: string }[] } | undefined;
-        // Critically: 1 product, not 2.
-        expect(mayAlsoLikeOpts?.products).toHaveLength(1);
-        expect(mayAlsoLikeOpts?.products?.[0]?.id).toBe('p-1');
+        expect([...mayAlsoLike, ...moreFromCategories].map((product) => product.productId).sort()).toEqual([
+            'other-1',
+            'other-2',
+        ]);
+    });
 
-        const recentlyViewedCall = fetchEnriched.mock.calls.find(
-            ([, opts]) => (opts as { name: string }).name === 'viewed-recently-einstein'
+    test('uses the categories of every cart product (up to three), not just the last one', async () => {
+        vi.mocked(fetchProductsInBasket).mockResolvedValue({
+            productsByItemId: {
+                'item-1': { id: 'product-1', primaryCategoryId: 'shirts' } as any,
+                'item-2': { id: 'product-2', primaryCategoryId: 'shoes' } as any,
+            },
+            bonusProductsById: {},
+        });
+        vi.mocked(fetchSearchProducts).mockImplementation((_context, parameters) =>
+            Promise.resolve({
+                hits: [{ productId: `${parameters.refine?.[0]}-hit` }],
+                total: 1,
+            } as any)
         );
-        expect(recentlyViewedCall).toBeDefined();
+
+        const result = loader(createLoaderArgs()) as any;
+        const [mayAlsoLike, moreFromCategories] = await Promise.all([
+            result.cartMayAlsoLikePromise,
+            result.cartMoreFromCategoriesPromise,
+        ]);
+
+        expect(fetchSearchProducts).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ refine: ['cgid=shirts'] })
+        );
+        expect(fetchSearchProducts).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ refine: ['cgid=shoes'] })
+        );
+        expect([...mayAlsoLike, ...moreFromCategories]).toHaveLength(2);
     });
 
     test('cartMayAlsoLikePromise silently degrades when basketDataPromise rejects', async () => {
@@ -274,7 +334,7 @@ describe('Cart route loader', () => {
         const result = loader(createLoaderArgs()) as any;
 
         await expect(result.basketDataPromise).rejects.toThrow();
-        await expect(result.cartMayAlsoLikePromise).resolves.toEqual({});
+        await expect(result.cartMayAlsoLikePromise).resolves.toEqual([]);
     });
 
     test('exposes ruleBasedBonusProductsPromise that chains off basketDataPromise', async () => {

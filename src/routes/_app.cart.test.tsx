@@ -21,12 +21,11 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AllProvidersWrapper } from '@/test-utils/context-provider';
 import { uiConfig } from '@/lib/config.ui';
 
-// CartContent is heavy and not what's under test — render its `recommendationsSlot`
-// inline so the route-level Suspense + ProductRecommendationSkeleton fallback wiring
-// is the only thing being exercised.
+// CartContent is heavy and not what's under test — render its recommendation slots inline
+// so the route-level Suspense + ProductRecommendationSkeleton fallback wiring is exercised.
 vi.mock('@/components/cart/cart-content', () => ({
-    default: ({ recommendationsSlot }: { recommendationsSlot?: ReactNode }) => (
-        <div data-testid="cart-content-stub">{recommendationsSlot}</div>
+    default: ({ categoryRecommendationsSlot }: { categoryRecommendationsSlot?: ReactNode }) => (
+        <div data-testid="cart-content-stub">{categoryRecommendationsSlot}</div>
     ),
 }));
 
@@ -44,25 +43,29 @@ vi.mock('@/components/product/skeletons', async () => {
     };
 });
 
-// ProductRecommendations stub that mirrors the real component's "show fallback while
-// `data` is pending" contract: the test only needs the Suspense behaviour, not the
-// resolved carousel rendering.
-vi.mock('@/components/product-recommendations', async () => {
-    const { Suspense, use } = await import('react');
-    const Resolved = ({ promise }: { promise: Promise<{ recs?: unknown[] }> }) => {
-        const value = use(promise);
-        return <div data-testid="product-recommendations-resolved">{(value?.recs?.length ?? 0).toString()}</div>;
-    };
-    return {
-        default: ({ data, fallback }: { data?: Promise<{ recs?: unknown[] }>; fallback?: ReactNode }) => (
-            <Suspense fallback={fallback ?? null}>{data ? <Resolved promise={data} /> : null}</Suspense>
-        ),
-    };
-});
+// Mount the deferred carousels immediately and stub the carousel itself: the test only needs the
+// route's Suspense behaviour, not the resolved carousel rendering.
+vi.mock('@/hooks/use-deferred-render', () => ({
+    useDeferredRender: () => true,
+}));
+vi.mock('@/components/product-carousel/carousel', () => ({
+    default: ({ products }: { products: unknown[] }) => (
+        <div data-testid="product-recommendations-resolved">{products.length.toString()}</div>
+    ),
+}));
 
 vi.mock('@/components/cart/cart-skeleton', () => ({
-    default: ({ recommendationsSlot }: { recommendationsSlot?: ReactNode }) => (
-        <div data-testid="cart-skeleton">{recommendationsSlot}</div>
+    default: ({
+        mayAlsoLikeSlot,
+        moreFromCategoriesSlot,
+    }: {
+        mayAlsoLikeSlot?: ReactNode;
+        moreFromCategoriesSlot?: ReactNode;
+    }) => (
+        <div data-testid="cart-skeleton">
+            {mayAlsoLikeSlot}
+            {moreFromCategoriesSlot}
+        </div>
     ),
 }));
 
@@ -96,7 +99,7 @@ const mockBasketData = {
 
 const renderCartRoute = async (loaderData: {
     cartMayAlsoLikePromise: Promise<any>;
-    cartRecentlyViewedPromise: Promise<any>;
+    cartMoreFromCategoriesPromise: Promise<any>;
 }) => {
     const Cart = (await import('./_app.cart')).default;
     const router = createMemoryRouter(
@@ -109,7 +112,7 @@ const renderCartRoute = async (loaderData: {
                     wishlistProductIdsPromise: Promise.resolve([]),
 
                     cartMayAlsoLikePromise: loaderData.cartMayAlsoLikePromise,
-                    cartRecentlyViewedPromise: loaderData.cartRecentlyViewedPromise,
+                    cartMoreFromCategoriesPromise: loaderData.cartMoreFromCategoriesPromise,
                     ruleBasedBonusProductsPromise: Promise.resolve({}),
                     basketSnapshot: null,
                     pageUrl: 'http://localhost/cart',
@@ -143,7 +146,7 @@ describe('Cart route component', () => {
 
             await renderCartRoute({
                 cartMayAlsoLikePromise: pending,
-                cartRecentlyViewedPromise: pending,
+                cartMoreFromCategoriesPromise: pending,
             });
 
             await waitFor(() => {
@@ -151,13 +154,12 @@ describe('Cart route component', () => {
             });
 
             const skeletons = await screen.findAllByTestId('product-recommendation-skeleton');
-            expect(skeletons).toHaveLength(1);
+            expect(skeletons).toHaveLength(2);
 
             // The skeleton receives the translated title for its recommender so the heading doesn't pop in when the
             // promise resolves.
             const titles = skeletons.map((el) => el.textContent);
-            expect(titles).toHaveLength(1);
-            expect(titles[0]).toBe('You might also like');
+            expect(titles).toEqual(['You might also like', 'More from these categories']);
         });
 
         test('renders the rec skeleton via the CartSkeleton fallback while basketDataPromise is pending', async () => {
@@ -179,7 +181,7 @@ describe('Cart route component', () => {
                             wishlistProductIdsPromise: Promise.resolve([]),
 
                             cartMayAlsoLikePromise: pendingRecs,
-                            cartRecentlyViewedPromise: pendingRecs,
+                            cartMoreFromCategoriesPromise: pendingRecs,
                             ruleBasedBonusProductsPromise: Promise.resolve({}),
                             basketSnapshot: { uniqueProductCount: 1 },
                             pageUrl: 'http://localhost/cart',
@@ -202,18 +204,17 @@ describe('Cart route component', () => {
             expect(screen.queryByTestId('cart-content-stub')).not.toBeInTheDocument();
 
             // The rec skeleton must already be in the DOM — passed through CartSkeleton's
-            // recommendationsSlot — so the carousel area doesn't pop in once the basket resolves.
+            // split recommendation slots — so carousel areas don't pop in once the basket resolves.
             const skeletons = await screen.findAllByTestId('product-recommendation-skeleton');
-            expect(skeletons).toHaveLength(1);
+            expect(skeletons).toHaveLength(2);
             const titles = skeletons.map((el) => el.textContent);
-            expect(titles).toHaveLength(1);
-            expect(titles[0]).toBe('You might also like');
+            expect(titles).toEqual(['You might also like', 'More from these categories']);
         });
 
         test('does not render ProductRecommendationSkeleton once recommendation promises resolve', async () => {
             await renderCartRoute({
-                cartMayAlsoLikePromise: Promise.resolve({ recs: [] }),
-                cartRecentlyViewedPromise: Promise.resolve({ recs: [] }),
+                cartMayAlsoLikePromise: Promise.resolve([{ productId: 'p1' }]),
+                cartMoreFromCategoriesPromise: Promise.resolve([{ productId: 'p2' }]),
             });
 
             await waitFor(() => {
@@ -237,15 +238,15 @@ describe('Cart route component', () => {
             uiConfig.pages.cart.showRecommendations = false;
 
             await renderCartRoute({
-                cartMayAlsoLikePromise: Promise.resolve({ recs: [] }),
-                cartRecentlyViewedPromise: Promise.resolve({ recs: [] }),
+                cartMayAlsoLikePromise: Promise.resolve([]),
+                cartMoreFromCategoriesPromise: Promise.resolve([]),
             });
 
             await waitFor(() => {
                 expect(screen.getByTestId('cart-content-stub')).toBeInTheDocument();
             });
 
-            // No skeleton, no resolved carousel — the recommendationsSlot is undefined.
+            // No skeleton or resolved carousel — both recommendation slots are undefined.
             expect(screen.queryByTestId('product-recommendation-skeleton')).not.toBeInTheDocument();
             expect(screen.queryByTestId('product-recommendations-resolved')).not.toBeInTheDocument();
         });
