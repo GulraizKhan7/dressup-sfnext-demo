@@ -31,7 +31,7 @@ interface HubAvailabilityListProps {
  * Hubs with no stock at all are not listed; a hub with some stock but fewer than the requested quantity says
  * how many it has.
  */
-export function HubAvailabilityList({ hubs, selectedLocationId, className }: HubAvailabilityListProps): ReactElement {
+export function HubAvailabilityList({ hubs, selectedLocationId, className }: HubAvailabilityListProps): ReactElement | null {
     const { t, date, leadTime, distance } = useDeliveryFormat();
     const ordered = hubs.filter((hub) => hub.stockLevel > 0).sort(
         (a, b) =>

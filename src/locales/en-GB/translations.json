@@ -8,7 +8,10 @@
         "clearAll": "Clear all",
         "filtersButtonLabel": "Filters",
         "filtersButtonLabelWithCount": "{{label}}, {{count}} selected",
-        "noFilterOptionsAvailable": "No filter options available."
+        "noFilterOptionsAvailable": "No filter options available.",
+        "closeFilters": "Close",
+        "viewResults": "View Results",
+        "filtersDrawerDescription": "Filter the products by attribute"
     },
     "common": {
         "defaultSiteName": "Storefront Next: Market Street",
@@ -1434,6 +1437,8 @@
         "featuredProducts": {
             "title": "Featured Products",
             "shopAll": "Shop all",
+            "allProducts": "All Products",
+            "quickView": "Quick View",
             "loadFailed": "Unable to load featured products."
         },
         "categoryGrid": {
@@ -1503,7 +1508,11 @@
             "accessibility": "Accessibility Statement",
             "privacyPolicy": "Privacy Policy",
             "privacyChoices": "Your Privacy Choices",
-            "termsOfUse": "Terms of Use"
+            "termsOfUse": "Terms of Use",
+            "returns": "Return Policy & Exchanges",
+            "faq": "FAQ",
+            "careers": "Careers",
+            "wishlist": "Wishlist"
         },
         "socialMedia": {
             "youtubeLabel": "Youtube",
@@ -1518,11 +1527,14 @@
             "emailLabel": "Email address for newsletter subscription",
             "subscribeButton": "Subscribe",
             "emailRequired": "Email address is required",
-            "invalidEmail": "Please enter a valid email address"
+            "invalidEmail": "Please enter a valid email address",
+            "inlineLabel": "Get Email Updates:",
+            "signUpButton": "Sign up"
         },
         "copyright": "Salesforce or its affiliates. All rights reserved. This is a demo store only. Orders made WILL NOT be processed.",
         "address": "415 Mission St, San Francisco, CA 94105",
-        "logoAlt": "Market Street"
+        "logoAlt": "Market Street",
+        "backToTop": "Top"
     },
     "aboutUs": {
         "breadcrumb": {
@@ -1776,6 +1788,9 @@
         }
     },
     "category": {
+        "itemsCount_one": "{{count}} item",
+        "itemsCount_other": "{{count}} items",
+        "allInCategory": "All {{name}}",
         "banner": {
             "counting": "Counting products...",
             "productsAvailable_one": "1 product available",

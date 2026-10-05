@@ -17,7 +17,6 @@ import { lazy, type ReactElement, type Ref, Suspense, useCallback, useEffect, us
 import { Await, useFetcher, useLoaderData, useOutletContext, useRevalidator } from 'react-router';
 /** @sfdc-extension-line SFDC_EXT_CUSTOMER_PREFERENCES */
 import type { Route } from './+types/_app.account._index';
-import { ToggleCard, ToggleCardSummary, ToggleCardEdit } from '@/components/toggle-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +32,8 @@ import { useScapiFetcher } from '@/hooks/use-scapi-fetcher';
 import { SeoMeta } from '@/components/seo-meta';
 import { useAuth } from '@/providers/auth';
 import { useTranslation } from 'react-i18next';
+import { CalendarDays, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
 /** @sfdc-extension-block-start SFDC_EXT_CUSTOMER_PREFERENCES */
 import { getCustomerPreferencesData } from '@/extensions/customer-preferences/lib/api/customer-preferences.server';
 import { CustomerPreferencesProvider } from '@/extensions/customer-preferences/context/customer-preferences-context';
@@ -80,6 +81,33 @@ export function loader(args: Route.LoaderArgs) {
     };
 }
 /** @sfdc-extension-block-end SFDC_EXT_CUSTOMER_PREFERENCES */
+
+/**
+ * Read-only labelled value with an underline, used in the "My account" card.
+ */
+function ProfileField({
+    label,
+    testId,
+    action,
+    children,
+}: {
+    label: string;
+    testId?: string;
+    action?: React.ReactNode;
+    children: React.ReactNode;
+}): ReactElement {
+    return (
+        <div className="border-b border-border/60 pb-2">
+            <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold leading-5 text-foreground">{label}</p>
+                {action}
+            </div>
+            <div className="mt-1 text-sm leading-5 text-muted-foreground" data-testid={testId}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 /**
  * Account details content component that renders when customer data is loaded.
@@ -207,6 +235,8 @@ function AccountDetailsContent({
         }),
         [displayCustomer]
     );
+
+    const personalNumber = (displayCustomer as Record<string, unknown> | null)?.c_personalNumber;
 
     // emailVerified is only present when "Enable Email Verification" is enabled in Storefront Login Preferences
     const isEmailVerificationEnabled = displayCustomer?.emailVerified !== undefined;
@@ -667,35 +697,23 @@ function AccountDetailsContent({
 
     return (
         <div className="space-y-5">
-            {/* Page Header Card */}
-            <Card className="bg-card border-border">
-                <CardContent className="px-6 py-3">
-                    <h1 className="text-2xl font-semibold text-foreground mb-1">{t('title')}</h1>
-                    <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-                </CardContent>
-            </Card>
-
-            {/* Personal Information – same layout as Interests & Preferences (header actions top right) */}
-            <Card data-testid="profile-card" className="bg-card border-border">
-                <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 border-b border-border pb-4">
-                    <div className="space-y-1.5 min-w-0">
-                        <CardTitle
-                            ref={profileTitleRef as unknown as Ref<HTMLDivElement>}
-                            as="h2"
-                            tabIndex={-1}
-                            className="text-base font-semibold">
-                            {t('profile.title')}
-                        </CardTitle>
-                        <CardDescription className="text-muted-foreground">{t('profile.description')}</CardDescription>
-                    </div>
+            {/* My account card – single card with underlined read-only fields */}
+            <Card data-testid="profile-card" className="bg-card [--ui-radius:var(--radius-3xl)] [--ui-shadow:none]">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border px-8 pb-5">
+                    <CardTitle
+                        ref={profileTitleRef as unknown as Ref<HTMLDivElement>}
+                        as="h1"
+                        tabIndex={-1}
+                        className="text-xl font-bold">
+                        {t('myAccount')}
+                    </CardTitle>
                     {isEditingProfile ? (
                         <div className="flex flex-wrap gap-2">
                             <Button
                                 type="submit"
                                 form="customer-profile-form"
                                 size="sm"
-                                disabled={updateProfileFetcher.state === FETCHER_STATES.SUBMITTING}
-                                className="">
+                                disabled={updateProfileFetcher.state === FETCHER_STATES.SUBMITTING}>
                                 {updateProfileFetcher.state === FETCHER_STATES.SUBMITTING
                                     ? t('common.saving')
                                     : t('common.save')}
@@ -705,24 +723,22 @@ function AccountDetailsContent({
                                 variant="outline"
                                 size="sm"
                                 onClick={handleCustomerProfileCancel}
-                                disabled={updateProfileFetcher.state === FETCHER_STATES.SUBMITTING}
-                                className="bg-card border-border text-foreground hover:bg-muted/50 px-4 py-2 text-sm font-medium">
+                                disabled={updateProfileFetcher.state === FETCHER_STATES.SUBMITTING}>
                                 {t('common.cancel')}
                             </Button>
                         </div>
                     ) : (
                         <Button
-                            variant="outline"
                             size="sm"
                             onClick={handleProfileEdit}
                             disabled={!canSubmitCustomerUpdates}
-                            className="bg-card border-border text-foreground hover:bg-muted/50 px-4 py-2 text-sm font-medium">
+                            className="px-4 text-sm font-semibold">
                             {t('common.edit')}
                         </Button>
                     )}
                 </CardHeader>
 
-                <CardContent className="pt-6">
+                <CardContent className="px-8 pt-8 pb-8">
                     {isEditingProfile ? (
                         <div ref={profileFormRef}>
                             <CustomerProfileForm
@@ -742,187 +758,193 @@ function AccountDetailsContent({
                             />
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium leading-5 text-foreground">
-                                    {t('profile.firstName')}
-                                </p>
-                                <p
-                                    className="text-sm font-normal leading-5 text-muted-foreground"
-                                    data-testid="profile-value-firstName">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-7">
+                            {/* Left column */}
+                            <div className="space-y-7 max-w-[400px]">
+                                <ProfileField label={t('profile.firstName')} testId="profile-value-firstName">
                                     {displayCustomer?.firstName || t('profile.notProvided')}
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium leading-5 text-foreground">{t('profile.lastName')}</p>
-                                <p
-                                    className="text-sm font-normal leading-5 text-muted-foreground"
-                                    data-testid="profile-value-lastName">
+                                </ProfileField>
+                                <ProfileField label={t('profile.lastName')} testId="profile-value-lastName">
                                     {displayCustomer?.lastName || t('profile.notProvided')}
-                                </p>
+                                </ProfileField>
+                                <ProfileField label={t('profile.gender')} testId="profile-value-gender">
+                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                        {[
+                                            { value: 2, label: t('profile.genderOptions.female') },
+                                            { value: 1, label: t('profile.genderOptions.male') },
+                                        ].map((option) => (
+                                            <span key={option.value} className="flex items-center gap-2">
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={cn(
+                                                        'size-4 rounded-full border border-border',
+                                                        displayCustomer?.gender === option.value &&
+                                                            'border-4 border-foreground'
+                                                    )}
+                                                />
+                                                {option.label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </ProfileField>
+                                <ProfileField label={t('profile.dateOfBirth')} testId="profile-value-birthday">
+                                    <span className="flex items-center justify-between">
+                                        {formatDateForLocale(displayCustomer?.birthday, i18n.language) ||
+                                            t('profile.notProvided')}
+                                        <CalendarDays className="size-4" aria-hidden="true" />
+                                    </span>
+                                </ProfileField>
+                                {typeof personalNumber === 'string' && personalNumber && (
+                                    <ProfileField
+                                        label={t('profile.personalNumber', { defaultValue: 'Personal number' })}
+                                        testId="profile-value-personalNumber">
+                                        {personalNumber}
+                                    </ProfileField>
+                                )}
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium leading-5 text-foreground">
-                                    {t('profile.phoneNumber')}
-                                </p>
-                                <p
-                                    className="text-sm font-normal leading-5 text-muted-foreground"
-                                    data-testid="profile-value-phone">
-                                    {userInfo.phoneNumber || t('profile.notProvided')}
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium leading-5 text-foreground">{t('profile.gender')}</p>
-                                <p
-                                    className="text-sm font-normal leading-5 text-muted-foreground"
-                                    data-testid="profile-value-gender">
-                                    {displayCustomer?.gender === 1
-                                        ? t('profile.genderOptions.male')
-                                        : displayCustomer?.gender === 2
-                                          ? t('profile.genderOptions.female')
-                                          : t('profile.notProvided')}
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium leading-5 text-foreground">
-                                    {t('profile.dateOfBirth')}
-                                </p>
-                                <p
-                                    className="text-sm font-normal leading-5 text-muted-foreground"
-                                    data-testid="profile-value-birthday">
-                                    {formatDateForLocale(displayCustomer?.birthday, i18n.language) ||
-                                        t('profile.notProvided')}
-                                </p>
+
+                            {/* Right column */}
+                            <div className="space-y-7 max-w-[400px]">
+                                <div data-testid="sf-toggle-card-email-content">
+                                    <ProfileField
+                                        label={t('email.title')}
+                                        testId="email-value"
+                                        action={
+                                            isEmailVerificationEnabled && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleEmailEdit}
+                                                    disabled={!canSubmitCustomerUpdates}
+                                                    className="text-xs font-medium text-foreground underline cursor-pointer">
+                                                    {t('email.changeEmail')}
+                                                </button>
+                                            )
+                                        }>
+                                        <span className="flex flex-wrap items-center gap-2 break-all">
+                                            {userInfo.email || t('profile.notProvided')}
+                                            {isEmailVerificationEnabled && (
+                                                <Badge
+                                                    data-testid={
+                                                        isEmailVerified
+                                                            ? 'email-verified-badge'
+                                                            : 'email-unverified-badge'
+                                                    }
+                                                    variant={isEmailVerified ? 'info' : 'secondary'}>
+                                                    {isEmailVerified ? t('email.verified') : t('email.unverified')}
+                                                </Badge>
+                                            )}
+                                        </span>
+                                        {isEmailVerificationEnabled && !isEmailVerified && (
+                                            <button
+                                                type="button"
+                                                onClick={handleVerifyEmailClick}
+                                                className="mt-1 text-xs font-medium text-foreground underline cursor-pointer">
+                                                {t('email.verifyEmail')}
+                                            </button>
+                                        )}
+                                    </ProfileField>
+                                </div>
+                                <div>
+                                    <ProfileField label={t('profile.phoneNumber')} testId="profile-value-phone">
+                                        {userInfo.phoneNumber || t('profile.notProvided')}
+                                    </ProfileField>
+                                    {!userInfo.phoneNumber && (
+                                        <button
+                                            type="button"
+                                            onClick={handleProfileEdit}
+                                            disabled={!canSubmitCustomerUpdates}
+                                            className="mt-2 flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                                            <Info className="size-4" aria-hidden="true" />
+                                            {t('profile.addMobilePhone', { defaultValue: 'Add mobile phone number' })}
+                                        </button>
+                                    )}
+                                </div>
+                                <div data-testid="sf-toggle-card-password-content">
+                                    <ProfileField
+                                        label={t('password.password')}
+                                        action={
+                                            <button
+                                                type="button"
+                                                disabled={!canSubmitCustomerUpdates}
+                                                onClick={hasPassword ? handlePasswordEdit : handlePasswordReset}
+                                                className="text-xs font-medium text-foreground underline cursor-pointer">
+                                                {hasPassword
+                                                    ? t('password.changePassword')
+                                                    : t('password.resetPassword')}
+                                            </button>
+                                        }>
+                                        {hasPassword ? t('password.hiddenPassword') : t('password.notProvided')}
+                                    </ProfileField>
+                                </div>
                             </div>
                         </div>
                     )}
+
+                    {/* Marketing communication checkboxes */}
+                    <div className="mt-10">
+                        <MarketingConsent
+                            subscriptions={subscriptions}
+                            contactPointValueByChannel={{
+                                email: userInfo.email,
+                                sms: userInfo.phoneNumber || undefined,
+                            }}
+                            onConsentUpdated={() => void revalidator.revalidate()}
+                        />
+                    </div>
                 </CardContent>
             </Card>
             <UITarget targetId="sfcc.myAccount.identity.verification" />
 
-            {/* Email Address Toggle Card */}
-            <ToggleCard
-                id="email"
-                data-testid="sf-toggle-card-email"
-                title={t('email.title')}
-                titleAs="h2"
-                description={t('email.description')}
-                editing={isEditingEmail}
-                showHeaderSeparator
-                className="bg-card border-border">
-                <ToggleCardSummary>
-                    <div
-                        className="flex flex-wrap items-center justify-between gap-3"
-                        data-testid="sf-toggle-card-email-content">
-                        <div className="space-y-2 min-w-0">
-                            <p className="text-sm font-medium text-foreground">{t('email.title')}</p>
-                            <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm text-foreground break-all" data-testid="email-value">
-                                    {userInfo.email || t('profile.notProvided')}
-                                </p>
-                                {isEmailVerificationEnabled && (
-                                    <Badge
-                                        data-testid={
-                                            isEmailVerified ? 'email-verified-badge' : 'email-unverified-badge'
-                                        }
-                                        variant={isEmailVerified ? 'info' : 'secondary'}>
-                                        {isEmailVerified ? t('email.verified') : t('email.unverified')}
-                                    </Badge>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            {isEmailVerificationEnabled && !isEmailVerified && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleVerifyEmailClick}
-                                    className="rounded-ui bg-card border-border text-foreground hover:bg-muted/50 px-4 py-2 text-sm font-medium">
-                                    {t('email.verifyEmail')}
-                                </Button>
-                            )}
-                            {isEmailVerificationEnabled && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleEmailEdit}
-                                    disabled={!canSubmitCustomerUpdates}
-                                    className="rounded-ui bg-card border-border text-foreground hover:bg-muted/50 px-4 py-2 text-sm font-medium">
-                                    {t('email.changeEmail')}
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </ToggleCardSummary>
-                <ToggleCardEdit>
-                    <EmailUpdateForm
-                        initialData={{ email: userInfo.email }}
-                        updateFetcher={updateEmailFetcher}
-                        onSuccess={handleEmailSuccess}
-                        onError={handleEmailError}
-                        onCancel={handleEmailCancel}
-                        requirePassword={hasPassword}
-                    />
-                </ToggleCardEdit>
-            </ToggleCard>
+            {/* Email change form (opened from the Email "Change" link) */}
+            {isEditingEmail && (
+                <Card
+                    data-testid="sf-toggle-card-email"
+                    className="bg-card [--ui-radius:var(--radius-3xl)] [--ui-shadow:none]">
+                    <CardHeader className="border-b border-border px-8 pb-4">
+                        <CardTitle as="h2" className="text-base font-semibold">
+                            {t('email.title')}
+                        </CardTitle>
+                        <CardDescription>{t('email.description')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-8 pt-6">
+                        <EmailUpdateForm
+                            initialData={{ email: userInfo.email }}
+                            updateFetcher={updateEmailFetcher}
+                            onSuccess={handleEmailSuccess}
+                            onError={handleEmailError}
+                            onCancel={handleEmailCancel}
+                            requirePassword={hasPassword}
+                        />
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Interests & Preferences Section */}
             <UITarget targetId="sfcc.myAccount.preferences" />
 
-            {/* Password & Security Toggle Card */}
-            <ToggleCard
-                id="password"
-                data-testid="sf-toggle-card-password"
-                title={t('password.title')}
-                titleAs="h2"
-                description={t('password.description')}
-                editing={isEditingPassword}
-                showHeaderSeparator
-                className="bg-card border-border">
-                <ToggleCardSummary>
-                    <div
-                        className="flex flex-wrap items-center justify-between gap-3"
-                        data-testid="sf-toggle-card-password-content">
-                        <div className="space-y-2">
-                            <h2 className="text-sm font-medium leading-5 text-foreground">{t('password.password')}</h2>
-                            <p className="text-sm font-normal leading-5 text-muted-foreground">
-                                {hasPassword ? t('password.hiddenPassword') : t('password.notProvided')}
-                            </p>
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!canSubmitCustomerUpdates}
-                            onClick={hasPassword ? handlePasswordEdit : handlePasswordReset}
-                            className="bg-card border-border text-foreground hover:bg-muted/50 px-4 py-2 text-sm font-medium">
-                            {hasPassword ? t('password.changePassword') : t('password.resetPassword')}
-                        </Button>
-                    </div>
-                </ToggleCardSummary>
-
-                {hasPassword && (
-                    <ToggleCardEdit>
+            {/* Password change form (opened from the Password "Change" link) */}
+            {isEditingPassword && hasPassword && (
+                <Card
+                    data-testid="sf-toggle-card-password"
+                    className="bg-card [--ui-radius:var(--radius-3xl)] [--ui-shadow:none]">
+                    <CardHeader className="border-b border-border px-8 pb-4">
+                        <CardTitle as="h2" className="text-base font-semibold">
+                            {t('password.title')}
+                        </CardTitle>
+                        <CardDescription>{t('password.description')}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-8 pt-6">
                         <PasswordUpdateForm
                             updateFetcher={passwordFetcher}
                             onSuccess={handlePasswordSuccess}
                             onError={handlePasswordError}
                             onCancel={handlePasswordCancel}
                         />
-                    </ToggleCardEdit>
-                )}
-            </ToggleCard>
+                    </CardContent>
+                </Card>
+            )}
             <UITarget targetId="sfcc.myAccount.gdpr.dataRequest" />
             <UITarget targetId="sfcc.myAccount.gdpr.deleteAccount" />
-
-            {/* Email Preferences – MarketingConsent (part of My Account) */}
-            <MarketingConsent
-                subscriptions={subscriptions}
-                contactPointValueByChannel={{
-                    email: userInfo.email,
-                    sms: userInfo.phoneNumber || undefined,
-                }}
-                onConsentUpdated={() => void revalidator.revalidate()}
-            />
 
             {/* OTP Modal for passwordless email editing */}
             {isOtpModalMounted && (

@@ -20,7 +20,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { OrderListBody, OrderListSkeleton } from '@/components/account/order-list';
-import { User, CreditCard, Receipt, MapPin } from 'lucide-react';
+import { User, CreditCard, Receipt, MapPin, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { formatDateForLocale } from '@/lib/date-utils';
 import type { ShopperCustomers } from '@/scapi';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@/hooks/use-navigate';
@@ -272,25 +274,266 @@ export function RecentOrdersSectionSkeleton(): ReactElement {
 }
 
 /**
+ * Dashboard card: titled panel with an optional "manage" link in the header.
+ */
+function DashboardCard({
+    title,
+    linkLabel,
+    linkTo,
+    className,
+    children,
+    testId,
+}: {
+    title: string;
+    linkLabel?: string;
+    linkTo?: string;
+    className?: string;
+    children: ReactNode;
+    testId?: string;
+}): ReactElement {
+    return (
+        <section className={cn('flex flex-col border border-border bg-card', className)} data-testid={testId}>
+            <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+                <h2 className="text-sm font-normal text-foreground">{title}</h2>
+                {linkLabel && linkTo && (
+                    <Link to={linkTo} className="text-xs text-foreground underline">
+                        {linkLabel}
+                    </Link>
+                )}
+            </header>
+            {children}
+        </section>
+    );
+}
+
+/** Centered empty state: message with an outlined call-to-action button. */
+function DashboardEmptyState({
+    message,
+    ctaLabel,
+    ctaTo,
+}: {
+    message: string;
+    ctaLabel: string;
+    ctaTo: string;
+}): ReactElement {
+    return (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-8 text-center">
+            <p className="max-w-xs text-xs text-foreground">{message}</p>
+            <Button asChild variant="outline" size="sm" className="border-foreground font-semibold">
+                <Link to={ctaTo}>{ctaLabel}</Link>
+            </Button>
+        </div>
+    );
+}
+
+/** Card listing link rows, each with a trailing chevron. */
+function DashboardLinkList({
+    description,
+    links,
+}: {
+    description?: string;
+    links: { to: string; label: string }[];
+}): ReactElement {
+    return (
+        <div className="flex flex-1 flex-col">
+            {description && <p className="px-4 py-3 text-xs text-foreground">{description}</p>}
+            <ul role="list">
+                {links.map((link) => (
+                    <li key={link.to} className="border-t border-border">
+                        <Link to={link.to} className="flex items-center justify-between px-4 py-3 text-sm">
+                            {link.label}
+                            <ChevronRight className="size-4" aria-hidden="true" />
+                        </Link>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+function PurchasesCard({ ordersPromise }: { ordersPromise?: Promise<CustomerOrdersResult> }): ReactElement {
+    const { t, i18n } = useTranslation('account');
+    const emptyState = (
+        <DashboardEmptyState
+            message={t('overview.dashboard.purchasesEmpty', {
+                defaultValue:
+                    "You'll be able to view details, track packages, manage returns and more when you make a purchase",
+            })}
+            ctaLabel={t('overview.dashboard.startShopping', { defaultValue: 'Start Shopping' })}
+            ctaTo="/"
+        />
+    );
+
+    return (
+        <DashboardCard
+            title={t('overview.dashboard.purchases', { defaultValue: 'Purchases' })}
+            linkLabel={t('overview.dashboard.viewAllPurchases', { defaultValue: 'View all purchases' })}
+            linkTo={routes.accountOrders}
+            testId="dashboard-purchases">
+            {ordersPromise ? (
+                <Suspense fallback={<Skeleton className="m-4 h-24" />}>
+                    <Await resolve={ordersPromise}>
+                        {(result: CustomerOrdersResult) =>
+                            result.orders.length === 0 ? (
+                                emptyState
+                            ) : (
+                                <ul role="list">
+                                    {result.orders.slice(0, 3).map((order) => (
+                                        <li key={order.orderNo} className="border-b border-border last:border-b-0">
+                                            <Link
+                                                to={routeHref(routes.accountOrderDetail, { orderNo: order.orderNo })}
+                                                className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                                                <span className="flex flex-col gap-1">
+                                                    <span className="font-semibold">
+                                                        {t('overview.dashboard.orderNo', {
+                                                            defaultValue: 'Order #{{orderNo}}',
+                                                            orderNo: order.orderNo,
+                                                        })}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {formatDateForLocale(order.orderDate, i18n.language)}
+                                                    </span>
+                                                </span>
+                                                <ChevronRight className="size-4" aria-hidden="true" />
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )
+                        }
+                    </Await>
+                </Suspense>
+            ) : (
+                emptyState
+            )}
+        </DashboardCard>
+    );
+}
+
+/**
  * Account Overview Dashboard component
  *
- * This dashboard displays:
- * - Welcome back greeting with customer name
- * - Recent orders (last 5)
- * - Curated product recommendations (using Einstein)
- * - Quick Links to key account sections
+ * Card-grid dashboard: Purchases, Wish Lists, Addresses, Payment Methods,
+ * Settings, Your Store and Customer Service, followed by recommendations.
  */
 export function AccountOverview({ customer, ordersPromise, recommendationsSlot }: AccountOverviewProps): ReactElement {
+    const { t } = useTranslation('account');
+    const firstName = customer?.firstName || t('overview.defaultName');
+
     return (
-        <div className="space-y-5">
-            <WelcomeSection customer={customer} />
-            <UITarget targetId="sfcc.myAccount.loyalty.summary" />
-            {ordersPromise && <AccountOverviewOrdersAwait ordersPromise={ordersPromise} />}
+        <div className="space-y-6">
+            <div className="bg-muted/30 p-6 sm:p-8">
+                <h1 className="mb-6 flex items-center justify-center gap-3 text-xl font-semibold text-foreground">
+                    <span
+                        aria-hidden="true"
+                        className="flex size-9 items-center justify-center rounded-full bg-foreground text-base text-background">
+                        {firstName.charAt(0).toUpperCase()}
+                    </span>
+                    {t('overview.dashboard.accountTitle', { defaultValue: "{{name}}'s Account", name: firstName })}
+                </h1>
+                <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                        <PurchasesCard ordersPromise={ordersPromise} />
+                    </div>
+                    <UITarget targetId="sfcc.myAccount.loyalty.summary" />
+
+                    <DashboardCard
+                        title={t('navigation.wishlist')}
+                        linkLabel={t('overview.dashboard.manageLists', { defaultValue: 'Manage lists' })}
+                        linkTo={routes.accountWishlist}>
+                        <DashboardEmptyState
+                            message={t('overview.dashboard.wishlistEmpty', {
+                                defaultValue:
+                                    'Add items to your list by shopping the site. Then, share your list so friends and family know what you love.',
+                            })}
+                            ctaLabel={t('overview.dashboard.startShopping', { defaultValue: 'Start Shopping' })}
+                            ctaTo="/"
+                        />
+                    </DashboardCard>
+                    <DashboardCard
+                        title={t('navigation.paymentMethods')}
+                        linkLabel={t('overview.dashboard.managePayments', { defaultValue: 'Manage payments' })}
+                        linkTo={routes.accountPaymentMethods}>
+                        <DashboardEmptyState
+                            message={t('overview.dashboard.paymentEmpty', {
+                                defaultValue: 'Add a payment method to check out even faster',
+                            })}
+                            ctaLabel={t('overview.dashboard.addPayment', { defaultValue: 'Add Payment Method' })}
+                            ctaTo={routes.accountPaymentMethods}
+                        />
+                    </DashboardCard>
+
+                    <DashboardCard
+                        title={t('navigation.shippingAddresses', { defaultValue: 'Shipping Addresses' })}
+                        linkLabel={t('overview.dashboard.manageAddresses', { defaultValue: 'Manage addresses' })}
+                        linkTo={routes.accountAddresses}>
+                        <DashboardEmptyState
+                            message={t('overview.dashboard.addressEmpty', {
+                                defaultValue: 'Add a shipping address to check out even faster',
+                            })}
+                            ctaLabel={t('overview.dashboard.addAddress', { defaultValue: 'Add Shipping Address' })}
+                            ctaTo={routes.accountAddresses}
+                        />
+                    </DashboardCard>
+                    <DashboardCard
+                        title={t('navigation.yourStore', { defaultValue: 'Your Store' })}
+                        linkLabel={t('overview.dashboard.setYourStore', { defaultValue: 'Set your store' })}
+                        linkTo={routes.accountStorePreferences}>
+                        <DashboardEmptyState
+                            message={t('overview.dashboard.storeEmpty', {
+                                defaultValue:
+                                    'Set your store for a personalized shopping experience and easily filter for items near you',
+                            })}
+                            ctaLabel={t('overview.dashboard.setYourStoreCta', { defaultValue: 'Set Your Store' })}
+                            ctaTo={routes.accountStorePreferences}
+                        />
+                    </DashboardCard>
+
+                    <DashboardCard title={t('overview.dashboard.settings', { defaultValue: 'Settings' })}>
+                        <DashboardLinkList
+                            description={t('overview.dashboard.settingsDescription', {
+                                defaultValue:
+                                    'Update communication preferences and personal info like your password, email and mobile',
+                            })}
+                            links={[
+                                {
+                                    to: routes.account,
+                                    label: t('overview.dashboard.updatePassword', {
+                                        defaultValue: 'Update password & personal info',
+                                    }),
+                                },
+                                {
+                                    to: routes.account,
+                                    label: t('overview.dashboard.updateEmail', {
+                                        defaultValue: 'Update email & mail preferences',
+                                    }),
+                                },
+                            ]}
+                        />
+                    </DashboardCard>
+                    <DashboardCard
+                        title={t('overview.dashboard.customerService', { defaultValue: 'Customer Service' })}
+                        linkLabel={t('overview.dashboard.moreOptions', { defaultValue: 'More options' })}
+                        linkTo={routes.accountOrders}>
+                        <DashboardLinkList
+                            links={[
+                                {
+                                    to: routes.accountOrders,
+                                    label: t('overview.dashboard.startReturn', { defaultValue: 'Start a return' }),
+                                },
+                                {
+                                    to: routes.accountOrders,
+                                    label: t('overview.dashboard.trackOrder', { defaultValue: 'Track your order' }),
+                                },
+                            ]}
+                        />
+                    </DashboardCard>
+                </div>
+            </div>
             <UITarget targetId="sfcc.myAccount.reviews.pending" />
             {recommendationsSlot}
             <AccountHelp />
             <AppDownloadSection />
-            <QuickLinksSection />
         </div>
     );
 }

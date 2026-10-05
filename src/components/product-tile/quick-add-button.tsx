@@ -73,7 +73,9 @@ export function QuickAddButton({
             <Button
                 variant="outline"
                 size="default"
-                className="w-full shadow-sm cursor-pointer"
+                // Solid white button with a dark outline so the label stays readable over any photo (the plain outline variant
+                // turns translucent grey in dark mode).
+                className="h-11 w-full cursor-pointer border-2 border-foreground bg-background font-semibold text-foreground shadow-sm hover:bg-background dark:border-foreground dark:bg-background dark:hover:bg-background"
                 aria-label={`${resolvedLabel} ${productName}`}
                 onClick={handleOpenModal}>
                 {resolvedLabel}

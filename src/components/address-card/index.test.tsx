@@ -85,8 +85,7 @@ describe('AddressCard', () => {
         test('passes isPreferred prop to AddressDisplay when true', () => {
             render(<AddressCard address={mockAddress} isPreferred={true} />);
 
-            // Badge is now rendered inside AddressDisplay, check it exists
-            expect(screen.getByText(t('account:addresses.default'))).toBeInTheDocument();
+            expect(screen.getByText('Primary shipping address')).toBeInTheDocument();
         });
 
         test('does not display default badge when isPreferred is false', () => {
@@ -194,8 +193,8 @@ describe('AddressCard', () => {
             render(<AddressCard address={mockAddress} onRemove={onRemove} />);
 
             const removeButton = screen.getByRole('button', { name: t('actionCard:remove') });
-            expect(removeButton).toHaveClass('font-bold');
-            expect(removeButton).toHaveClass('px-0');
+            expect(removeButton).toHaveClass('underline');
+            expect(removeButton).toHaveClass('p-0');
         });
     });
 

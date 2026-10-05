@@ -42,7 +42,7 @@ const CartItemModal = lazy(() =>
 type Product = ShopperProducts.schemas['Product'];
 type CustomerProductListItem = ShopperCustomers.schemas['CustomerProductListItem'];
 
-const CTA_BUTTON_CLASS = 'w-full md:w-auto md:min-w-28';
+const CTA_BUTTON_CLASS = 'w-full border border-foreground bg-card text-foreground hover:bg-muted font-semibold';
 
 interface WishlistListItemProps {
     product: Product;
@@ -51,9 +51,9 @@ interface WishlistListItemProps {
 }
 
 /**
- * WishlistListItem — horizontal card row for a single wishlist product.
+ * WishlistListItem — vertical tile for a single wishlist product.
  *
- * Layout: [Image | Name + Variants + Stock + Remove | Price]
+ * Layout: Image / Name + Variants + Stock / Price / CTA / Remove
  */
 export function WishlistListItem({ product, wishlistItem, onRemove }: WishlistListItemProps): ReactElement {
     const { t } = useTranslation('product');
@@ -195,10 +195,10 @@ export function WishlistListItem({ product, wishlistItem, onRemove }: WishlistLi
 
     return (
         <div data-testid={`wishlist-item-${wishlistItem.id}`}>
-            <div className="flex gap-4 p-4 rounded-ui border border-border bg-card">
+            <div className="flex flex-col gap-3 bg-card">
                 {/* Product Image */}
-                <Link to={pdpUrl} className="flex-shrink-0 self-start" aria-label={product.name}>
-                    <div className="w-20 h-20 md:w-28 md:h-28 rounded-ui overflow-hidden bg-muted flex items-center justify-center">
+                <Link to={pdpUrl} className="block w-full" aria-label={product.name}>
+                    <div className="w-full aspect-[3/4] overflow-hidden bg-muted flex items-center justify-center">
                         {optimizedImageUrl ? (
                             <img
                                 src={optimizedImageUrl}
@@ -212,12 +212,10 @@ export function WishlistListItem({ product, wishlistItem, onRemove }: WishlistLi
                 </Link>
 
                 {/* Product Details */}
-                <div className="flex flex-1 flex-col md:flex-row gap-4 min-w-0">
+                <div className="flex flex-1 flex-col gap-3 min-w-0 text-center">
                     {/* Name + Variants + Stock + Remove */}
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                        <Link
-                            to={pdpUrl}
-                            className="text-base font-medium text-foreground hover:text-primary line-clamp-2 block">
+                    <div className="min-w-0 space-y-1">
+                        <Link to={pdpUrl} className="text-sm text-foreground hover:underline line-clamp-2 block">
                             {product.name}
                         </Link>
 
@@ -247,16 +245,6 @@ export function WishlistListItem({ product, wishlistItem, onRemove }: WishlistLi
                             currentVariant={matchedVariant ?? null}
                             className="text-xs px-2 py-0.5"
                         />
-
-                        {/* Remove button */}
-                        <button
-                            type="button"
-                            onClick={handleRemove}
-                            disabled={isRemoving}
-                            className="block text-sm text-muted-foreground hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-2 cursor-pointer"
-                            aria-label={t('removeFromWishlist')}>
-                            {t('remove')}
-                        </button>
                     </div>
 
                     {/* Price — display tracks the gate's view of the saved selection.
@@ -269,7 +257,7 @@ export function WishlistListItem({ product, wishlistItem, onRemove }: WishlistLi
                         lowest-priced fallback. The gate evaluates the saved variant via
                         useProductActions(currentVariant) above, so this keeps display + gate in
                         agreement on the same row. */}
-                    <div className="flex flex-col gap-2 flex-shrink-0 md:items-end md:text-right">
+                    <div className="flex flex-col items-center gap-2">
                         <ProductPrice
                             type="unit"
                             product={
@@ -324,6 +312,15 @@ export function WishlistListItem({ product, wishlistItem, onRemove }: WishlistLi
                                 ) : null}
                             </>
                         )}
+                        {/* Remove button */}
+                        <button
+                            type="button"
+                            onClick={handleRemove}
+                            disabled={isRemoving}
+                            className="block mx-auto text-sm text-foreground underline hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            aria-label={t('removeFromWishlist')}>
+                            {t('remove')}
+                        </button>
                     </div>
                 </div>
             </div>

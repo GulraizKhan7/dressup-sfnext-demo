@@ -21,6 +21,8 @@ export interface AccountNavItemData {
     path: string;
     icon: LucideIcon;
     label: string;
+    /** Optional secondary line shown under the label. */
+    description?: string;
     disabled?: boolean;
     /** When true, NavLink is only active for exact path match (e.g. /account not /account/overview). */
     end?: boolean;
