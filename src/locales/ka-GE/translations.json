@@ -278,6 +278,21 @@
     "closeAriaLabel": "დახურვა",
     "each": "თითოეული"
   },
+  "checkout": {
+    "shippingSummary": {
+      "heading": "მიწოდება",
+      "arrives": "ჩამოვა {{when}}",
+      "chooseMethod": "აირჩიეთ მიწოდების მეთოდი, რათა ნახოთ, როდის ჩამოვა თქვენი შეკვეთა.",
+      "changeSpeed": "მიწოდების სიჩქარის შეცვლა",
+      "free": "უფასო",
+      "quantity": "რაოდენობა {{count}}"
+    },
+    "reviewOrder": {
+      "title": "შეკვეთის გადახედვა",
+      "yourItems": "თქვენი ნივთები",
+      "secureNote": "გადახდა დაცული და დაშიფრულია."
+    }
+  },
   "product": {
     "fulfillment": {
       "delivery": "მიწოდება",

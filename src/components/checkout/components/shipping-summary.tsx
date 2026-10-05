@@ -75,8 +75,9 @@ interface ShippingSummaryProps {
 
 /**
  * First card of the checkout page: the page title, a "Shipping" heading, a "Change shipping speed" link, and the
- * items grouped by shipment. Each shipment shows its arrival estimate (the selected method's delivery window, when
- * known), the method name with its price, and a thumbnail per item. Store-pickup shipments are skipped: they have
+ * items grouped by shipment. Each shipment shows the method name with its price and a thumbnail per item. Dates: when
+ * our own delivery estimate exists for the items (hub + lead time) only that is shown, per delivery; otherwise the
+ * shipment shows the selected method's delivery window, when known. Store-pickup shipments are skipped: they have
  * their own pickup section.
  */
 export default function ShippingSummary({
@@ -98,18 +99,25 @@ export default function ShippingSummary({
     const groups = shipments
         .map((shipment) => {
             const record = shipment as Record<string, unknown>;
-            const arrival = formatDeliveryWindow(
-                {
-                    startAt: record.c_deliveryWindowStartAt as string | undefined,
-                    endAt: record.c_deliveryWindowEndAt as string | undefined,
-                },
-                i18n.language
-            );
+            const shipmentItems = items.filter((item) => item.shipmentId === shipment.shipmentId);
+            // Our own delivery estimate (hub + lead time) is shown per item below. When it exists, it is the only
+            // date shown: the SFCC shipping method's delivery window could disagree with it.
+            const hasOwnDelivery = shipmentItems.some((item) => getDelivery(item.itemId));
+            const arrival = hasOwnDelivery
+                ? undefined
+                : formatDeliveryWindow(
+                      {
+                          startAt: record.c_deliveryWindowStartAt as string | undefined,
+                          endAt: record.c_deliveryWindowEndAt as string | undefined,
+                      },
+                      i18n.language
+                  );
             const method = shipment.shippingMethod;
             const price = method?.price ?? shipment.shippingTotal;
             return {
                 shipment,
                 arrival,
+                hasOwnDelivery,
                 methodName: method?.name,
                 methodDescription: method?.description,
                 priceLabel:
@@ -118,7 +126,7 @@ export default function ShippingSummary({
                             ? t('shippingSummary.free')
                             : formatCurrency(price, i18n.language, currency)
                         : undefined,
-                items: items.filter((item) => item.shipmentId === shipment.shipmentId),
+                items: shipmentItems,
             };
         })
         .filter((group) => group.items.length > 0);
@@ -154,6 +162,7 @@ export default function ShippingSummary({
                             ({
                                 shipment,
                                 arrival,
+                                hasOwnDelivery,
                                 methodName,
                                 methodDescription,
                                 priceLabel,
@@ -168,7 +177,12 @@ export default function ShippingSummary({
                                         )}
                                         {methodName ? (
                                             <p className="text-sm text-foreground">
-                                                <span className={arrival ? undefined : 'font-semibold text-success'}>
+                                                <span
+                                                    className={
+                                                        arrival || hasOwnDelivery
+                                                            ? undefined
+                                                            : 'font-semibold text-success'
+                                                    }>
                                                     {methodName}
                                                 </span>
                                                 {priceLabel && <span> · {priceLabel}</span>}
@@ -178,7 +192,7 @@ export default function ShippingSummary({
                                                 {t('shippingSummary.chooseMethod')}
                                             </p>
                                         )}
-                                        {!arrival && methodDescription && (
+                                        {!arrival && !hasOwnDelivery && methodDescription && (
                                             <p className="text-sm text-muted-foreground">{methodDescription}</p>
                                         )}
                                     </div>

@@ -480,17 +480,6 @@
             "retry": "Retry"
         }
     },
-    "fulfillmentLocation": {
-        "leadTime": "Lead time",
-        "leadTimeDays_one": "{{count}} day",
-        "leadTimeDays_other": "{{count}} days",
-        "distanceValue": "{{value}} {{unit}}",
-        "unavailable": "Unavailable",
-        "exceedsStock": "Only {{stock}} available.",
-        "deliveryBy": "Delivery by {{date}}",
-        "shipsFrom": "Ships from {{city}}",
-        "cartGroupHeading": "Delivery from {{city}} - {{itemCount}} out of {{totalCount}} items"
-    },
     "checkout": {
         "shippingSummary": {
             "heading": "Shipping",

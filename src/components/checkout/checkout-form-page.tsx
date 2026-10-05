@@ -1092,9 +1092,7 @@ export default function CheckoutFormPage({
     }
 
     return (
-        <div
-            data-section="checkout"
-            className="bg-accent [--ui-radius:0px] [--ui-shadow:none] [--ui-border-width:0px] [&_[data-slot=card]]:[--ui-border-width:0px]! [&_input]:bg-card [&_input]:hover:bg-card [&_select]:bg-card [&_textarea]:bg-card [&_[data-slot=select-trigger]]:bg-card [&_[role=checkbox][data-state=unchecked]]:bg-card">
+        <div data-section="checkout" className="bg-accent">
             {shippingMethodsMapPromise && (
                 <Suspense fallback={null}>
                     <ShippingMethodsBridge
@@ -1151,6 +1149,16 @@ export default function CheckoutFormPage({
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr_auto] lg:gap-6">
                     <div className="space-y-4 md:order-2 lg:order-1 lg:col-start-1 lg:row-span-2 [&_[data-slot=card-header].border-b]:border-b-0 [&_[data-slot=card-header].border-b]:pb-0">
                         <UITarget targetId="sfcc.checkout.mainContent.before" />
+                        {/* Express Payments - Apple Pay, Google Pay, Amazon Pay, PayPal & Venmo.
+                            At the top so shoppers can skip the forms below. */}
+                        <UITarget targetId="sfcc.checkout.expressPayments.header.before" />
+                        <Suspense fallback={<ExpressPaymentsSkeleton />}>
+                            <UITarget targetId="sfcc.checkout.expressPayments.before" />
+                            <UITarget targetId="sfcc.checkout.expressPayments">
+                                <ExpressPayments separatorText={t('expressPayments.separator')} />
+                            </UITarget>
+                            <UITarget targetId="sfcc.checkout.expressPayments.after" />
+                        </Suspense>
                         {/* Title + Shipping: items grouped by shipment with their arrival estimate */}
                         {cart ? (
                             <Suspense fallback={<ShippingSummarySkeleton />}>
@@ -1163,29 +1171,6 @@ export default function CheckoutFormPage({
                         ) : (
                             <ShippingSummarySkeleton />
                         )}
-                        {/* Shipping Address & Options */}
-                        {showAddressAndOptions && (
-                            <>
-                                <UITarget targetId="sfcc.checkout.shippingAddress.header.before" />
-                                <Suspense fallback={<ShippingAddressSkeleton />}>
-                                    <UITarget targetId="sfcc.checkout.shippingAddress.before" />
-                                    <UITarget targetId="sfcc.checkout.shippingAddress">
-                                        {shippingAddressComponent}
-                                    </UITarget>
-                                    <UITarget targetId="sfcc.checkout.shippingAddress.after" />
-                                </Suspense>
-
-                                <UITarget targetId="sfcc.checkout.shippingOptions.header.before" />
-                                <Suspense fallback={<ShippingOptionsSkeleton />}>
-                                    <UITarget targetId="sfcc.checkout.shippingOptions.before" />
-                                    <UITarget targetId="sfcc.checkout.shippingOptions">
-                                        {shippingOptionsComponent}
-                                    </UITarget>
-                                    <UITarget targetId="sfcc.checkout.shippingOptions.after" />
-                                </Suspense>
-                            </>
-                        )}
-
                         <UITarget targetId="sfcc.checkout.contactInfo.header.before" />
                         <Suspense fallback={<ContactInfoSkeleton />}>
                             <UITarget targetId="sfcc.checkout.contactInfo.before" />
@@ -1208,6 +1193,29 @@ export default function CheckoutFormPage({
                             </UITarget>
                             <UITarget targetId="sfcc.checkout.contactInfo.after" />
                         </Suspense>
+
+                        {/* Shipping Address & Options */}
+                        {showAddressAndOptions && (
+                            <>
+                                <UITarget targetId="sfcc.checkout.shippingAddress.header.before" />
+                                <Suspense fallback={<ShippingAddressSkeleton />}>
+                                    <UITarget targetId="sfcc.checkout.shippingAddress.before" />
+                                    <UITarget targetId="sfcc.checkout.shippingAddress">
+                                        {shippingAddressComponent}
+                                    </UITarget>
+                                    <UITarget targetId="sfcc.checkout.shippingAddress.after" />
+                                </Suspense>
+
+                                <UITarget targetId="sfcc.checkout.shippingOptions.header.before" />
+                                <Suspense fallback={<ShippingOptionsSkeleton />}>
+                                    <UITarget targetId="sfcc.checkout.shippingOptions.before" />
+                                    <UITarget targetId="sfcc.checkout.shippingOptions">
+                                        {shippingOptionsComponent}
+                                    </UITarget>
+                                    <UITarget targetId="sfcc.checkout.shippingOptions.after" />
+                                </Suspense>
+                            </>
+                        )}
 
                         {/* @sfdc-extension-block-start SFDC_EXT_BOPIS */}
                         {/* Store Pickup Information */}
@@ -1239,22 +1247,6 @@ export default function CheckoutFormPage({
                                             showUseDifferentBilling={showAddressAndOptions}
                                             paymentSubmissionRef={paymentSubmissionRef}
                                             hidePaymentSaveCheckbox={shouldCreateAccount}
-                                            expressPayments={
-                                                <>
-                                                    {/* Express Payments - Apple Pay, Google Pay, Amazon Pay, PayPal & Venmo.
-                                                        Shown inside the Payment section, above the card form. */}
-                                                    <UITarget targetId="sfcc.checkout.expressPayments.header.before" />
-                                                    <Suspense fallback={<ExpressPaymentsSkeleton />}>
-                                                        <UITarget targetId="sfcc.checkout.expressPayments.before" />
-                                                        <UITarget targetId="sfcc.checkout.expressPayments">
-                                                            <ExpressPayments
-                                                                separatorText={t('expressPayments.separator')}
-                                                            />
-                                                        </UITarget>
-                                                        <UITarget targetId="sfcc.checkout.expressPayments.after" />
-                                                    </Suspense>
-                                                </>
-                                            }
                                             {...paymentState}
                                         />
                                     </UITarget>

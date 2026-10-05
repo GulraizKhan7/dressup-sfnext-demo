@@ -348,13 +348,7 @@ let mockOnPlaceOrder: (() => Promise<string | null>) | null = null;
 let mockBillingAddressGetter: (() => Record<string, unknown> | null) | null = null;
 
 vi.mock('./components/payment', () => ({
-    default: ({
-        paymentSubmissionRef,
-        expressPayments,
-    }: {
-        paymentSubmissionRef?: { current: Record<string, unknown> };
-        expressPayments?: ReactNode;
-    }) => {
+    default: ({ paymentSubmissionRef }: { paymentSubmissionRef?: { current: Record<string, unknown> } }) => {
         if (paymentSubmissionRef) {
             paymentSubmissionRef.current.formDataGetter = mockPaymentFormDataGetter;
             paymentSubmissionRef.current.setFormErrors = (
@@ -365,12 +359,7 @@ vi.mock('./components/payment', () => ({
             paymentSubmissionRef.current.onPlaceOrder = mockOnPlaceOrder;
             paymentSubmissionRef.current.billingAddressGetter = mockBillingAddressGetter;
         }
-        return (
-            <div data-testid="payment">
-                Payment Form
-                {expressPayments}
-            </div>
-        );
+        return <div data-testid="payment">Payment Form</div>;
     },
 }));
 
@@ -545,9 +534,6 @@ describe('CheckoutFormPage', () => {
 
     describe('Express payment handlers', () => {
         test('renders express payments component with all buttons', async () => {
-            // Express checkout lives inside the Payment section, which mounts at the payment step.
-            mockUseCheckoutContext.mockReturnValue(buildCheckoutContext({ step: defaultSteps.PAYMENT }));
-
             await renderCheckoutPage();
 
             // Wait for express payments component to load (lazy loaded with Suspense)
@@ -783,9 +769,6 @@ describe('CheckoutFormPage', () => {
 
     describe('Responsive order summary layout', () => {
         test('keeps main checkout content before sidebar in DOM so keyboard tab order matches visual reading order (WCAG 2.4.3)', async () => {
-            // Express checkout lives inside the Payment section, which mounts at the payment step.
-            mockUseCheckoutContext.mockReturnValue(buildCheckoutContext({ step: defaultSteps.PAYMENT }));
-
             await renderCheckoutPage();
 
             const sidebar = screen.getByTestId('checkout-order-summary-sidebar');
@@ -796,9 +779,6 @@ describe('CheckoutFormPage', () => {
         });
 
         test('uses a two-column grid on lg with the sidebar on the right and still above main on md', async () => {
-            // Express checkout lives inside the Payment section, which mounts at the payment step.
-            mockUseCheckoutContext.mockReturnValue(buildCheckoutContext({ step: defaultSteps.PAYMENT }));
-
             const { container } = await renderCheckoutPage();
 
             const grid = container.querySelector('.grid.grid-cols-1');
