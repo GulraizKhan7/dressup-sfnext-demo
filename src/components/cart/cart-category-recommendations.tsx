@@ -13,43 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { ReactElement } from 'react';
-import DeferredProductRecommendations from '@/components/product-recommendations/deferred';
+import { Suspense, type ReactElement } from 'react';
+import { Await } from 'react-router';
+import type { ShopperSearch } from '@/scapi';
+import ProductCarousel from '@/components/product-carousel/carousel';
 import { ProductRecommendationSkeleton } from '@/components/product/skeletons';
-import { EINSTEIN_RECOMMENDERS } from '@/lib/product/einstein-recommenders';
-import type { Recommendation } from '@/hooks/recommenders/use-recommenders';
+import { useDeferredRender } from '@/hooks/use-deferred-render';
+
+type ProductHits = ShopperSearch.schemas['ProductSearchHit'][];
 
 interface CartCategoryRecommendationsProps {
-    mayAlsoLikePromise: Promise<Recommendation>;
-    recentlyViewedPromise: Promise<Recommendation>;
+    mayAlsoLikePromise: Promise<ProductHits>;
+    moreFromCategoriesPromise: Promise<ProductHits>;
     mayAlsoLikeTitle: string;
-    recentlyViewedTitle: string;
+    moreFromCategoriesTitle: string;
+}
+
+/**
+ * One category-products carousel with its own deferred mount and Suspense boundary.
+ *
+ * These are plain category products, not Einstein recommendations, so the carousel is rendered directly and no
+ * recommender name is passed along — clicks and impressions are not reported as Einstein recommender events.
+ * Mounting is deferred to an idle frame (see `DeferredProductRecommendations`) so the below-the-fold carousel does not
+ * compete with the critical paint.
+ */
+function CategoryProductsCarousel({ title, data }: { title: string; data: Promise<ProductHits> }): ReactElement {
+    const shouldRender = useDeferredRender(true);
+    const fallback = <ProductRecommendationSkeleton title={title} className="max-w-none px-0" />;
+
+    if (!shouldRender) {
+        return fallback;
+    }
+
+    return (
+        <Suspense fallback={fallback}>
+            <Await resolve={data} errorElement={null}>
+                {(products: ProductHits) =>
+                    products.length > 0 ? (
+                        <ProductCarousel products={products} title={title} className="max-w-none px-0" />
+                    ) : null
+                }
+            </Await>
+        </Suspense>
+    );
 }
 
 export default function CartCategoryRecommendations({
     mayAlsoLikePromise,
-    recentlyViewedPromise,
+    moreFromCategoriesPromise,
     mayAlsoLikeTitle,
-    recentlyViewedTitle,
+    moreFromCategoriesTitle,
 }: CartCategoryRecommendationsProps): ReactElement {
     return (
         <>
-            <DeferredProductRecommendations
-                recommenderName={EINSTEIN_RECOMMENDERS.CART_MAY_ALSO_LIKE}
-                recommenderTitle={mayAlsoLikeTitle}
-                data={mayAlsoLikePromise}
-                className="max-w-none px-0"
-                fallback={<ProductRecommendationSkeleton title={mayAlsoLikeTitle} className="max-w-none px-0" />}
-            />
-            <DeferredProductRecommendations
-                recommenderName={EINSTEIN_RECOMMENDERS.CART_RECENTLY_VIEWED}
-                recommenderTitle={recentlyViewedTitle}
-                data={recentlyViewedPromise}
-                className="max-w-none px-0"
-                fallback={
-                    <ProductRecommendationSkeleton title={recentlyViewedTitle} className="max-w-none px-0" />
-                }
-            />
+            <CategoryProductsCarousel title={mayAlsoLikeTitle} data={mayAlsoLikePromise} />
+            <CategoryProductsCarousel title={moreFromCategoriesTitle} data={moreFromCategoriesPromise} />
         </>
     );
 }

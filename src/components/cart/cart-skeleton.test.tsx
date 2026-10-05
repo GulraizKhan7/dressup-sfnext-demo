@@ -99,7 +99,7 @@ describe('CartSkeleton', () => {
                 <CartSkeleton
                     productItemCount={1}
                     mayAlsoLikeSlot={<div data-testid="may-also-like-skeleton-slot">may also like</div>}
-                    recentlyViewedSlot={<div data-testid="recently-viewed-skeleton-slot">recently viewed</div>}
+                    moreFromCategoriesSlot={<div data-testid="recently-viewed-skeleton-slot">recently viewed</div>}
                 />
             );
             expect(screen.getByTestId('may-also-like-skeleton-slot')).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('CartSkeleton', () => {
                 <CartSkeleton
                     productItemCount={0}
                     mayAlsoLikeSlot={<div data-testid="may-also-like-skeleton-slot">may also like</div>}
-                    recentlyViewedSlot={<div data-testid="recently-viewed-skeleton-slot">recently viewed</div>}
+                    moreFromCategoriesSlot={<div data-testid="recently-viewed-skeleton-slot">recently viewed</div>}
                 />
             );
             expect(screen.queryByTestId('may-also-like-skeleton-slot')).not.toBeInTheDocument();

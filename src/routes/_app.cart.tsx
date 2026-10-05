@@ -40,14 +40,11 @@ import { fetchProductsInBasket } from '@/lib/cart/basket-products.server';
 import { fetchPromotionsForBasket } from '@/lib/cart/basket-promotions.server';
 import { fetchWishlistProductIdsForCart } from '@/lib/cart/cart-wishlist.server';
 import { fetchRuleBasedBonusProductsForBasket } from '@/lib/cart/rule-based-bonus.server';
-import { fetchProductRecommendations } from '@/lib/product/recommendations.server';
 import { fetchSearchProducts } from '@/lib/api/search.server';
 import { fetchProductsByIds } from '@/lib/api/products.server';
-import { EINSTEIN_RECOMMENDERS } from '@/lib/product/einstein-recommenders';
 import { uiConfig } from '@/lib/config.ui';
 import { getConfig } from '@salesforce/storefront-next-runtime/config';
 import { siteContext } from '@salesforce/storefront-next-runtime/site-context';
-import type { Recommendation } from '@/hooks/recommenders/use-recommenders';
 
 // Components
 import CartSkeleton from '@/components/cart/cart-skeleton';
@@ -98,8 +95,8 @@ type CartPageData = {
         // @sfdc-extension-block-end SFDC_EXT_BOPIS
     }>;
     wishlistProductIdsPromise: Promise<string[]>;
-    cartMayAlsoLikePromise: Promise<Recommendation>;
-    cartRecentlyViewedPromise: Promise<Recommendation>;
+    cartMayAlsoLikePromise: Promise<ShopperSearch.schemas['ProductSearchHit'][]>;
+    cartMoreFromCategoriesPromise: Promise<ShopperSearch.schemas['ProductSearchHit'][]>;
     ruleBasedBonusProductsPromise: Promise<Record<string, ShopperSearch.schemas['ProductSearchHit'][]>>;
     basketSnapshot: BasketSnapshot | null;
     pageUrl: string;
@@ -150,132 +147,94 @@ export const loader = ({ context, request }: Route.LoaderArgs): CartPageData => 
 
     const wishlistProductIdsPromise = fetchWishlistProductIdsForCart(context);
 
-    // CART_MAY_ALSO_LIKE wants a deduplicated product list as input — chain off basketDataPromise so we get
-    // productsByItemId without awaiting it inline. The dedup runs in this loader closure (server-only); the
-    // resulting array never gets serialized to the client. Dedup matters because two cart lines mapping to
-    // the same parent productId would otherwise be sent to Einstein twice.
-    // If basketDataPromise itself rejects, the surrounding cart UI already shows CartLoadError, so we
-    // silently degrade here.
-    // Recommendations are gated per-vertical via uiConfig.pages.cart.showRecommendations. When a vertical
-    // turns them off (e.g. cosmetic), skip the Einstein fetches entirely — resolve to empty so the
-    // promise shape the component pins stays stable, but no SCAPI recommendation call is made.
-    let categoryProductsPromise: Promise<ShopperSearch.schemas['ProductSearchHit'][]> | undefined;
-    const getCategoryProducts = (): Promise<ShopperSearch.schemas['ProductSearchHit'][]> => {
-        categoryProductsPromise ??= basketDataPromise
-            .then(async ({ productsByItemId }) => {
-                const cartProducts = Object.values(productsByItemId);
-                const ownCategoryId = (product: ShopperProducts.schemas['Product']): string | undefined =>
-                    product.primaryCategoryId ?? product.primaryCategory?.id;
+    // The two recommendation carousels are plain category products (no Einstein): the other products of the
+    // categories of the cart products, split in half. Gated per-vertical via uiConfig.pages.cart.showRecommendations;
+    // when off, resolve to empty so the promise shape the component pins stays stable but no search call is made.
+    // If basketDataPromise itself rejects, the surrounding cart UI already shows CartLoadError, so we silently
+    // degrade here.
+    const categoryProductsPromise: Promise<ShopperSearch.schemas['ProductSearchHit'][]> = uiConfig.pages.cart
+        .showRecommendations
+        ? basketDataPromise
+              .then(async ({ productsByItemId }) => {
+                  const cartProducts = Object.values(productsByItemId);
+                  const ownCategoryId = (product: ShopperProducts.schemas['Product']): string | undefined =>
+                      product.primaryCategoryId ?? product.primaryCategory?.id;
 
-                // A cart line is usually a variant (e.g. DU-879143-XS), and a variant carries no primary category of
-                // its own: the category lives on its master product. Look the masters up (one call) so the
-                // recommendations follow the category of every product in the cart.
-                const masterIdsToResolve = [
-                    ...new Set(
-                        cartProducts
-                            .filter((product) => !ownCategoryId(product) && product.master?.masterId)
-                            .map((product) => product.master?.masterId as string)
-                    ),
-                ];
-                const masters = masterIdsToResolve.length
-                    ? await fetchProductsByIds(context, masterIdsToResolve, { expand: ['prices'] }).catch(
-                          (): ShopperProducts.schemas['Product'][] => []
-                      )
-                    : [];
-                const masterCategoryId = new Map(masters.map((master) => [master.id, ownCategoryId(master)]));
+                  // A cart line is usually a variant (e.g. DU-879143-XS), and a variant carries no primary category
+                  // of its own: the category lives on its master product. Look the masters up (one call) so the
+                  // recommendations follow the category of every product in the cart.
+                  const masterIdsToResolve = [
+                      ...new Set(
+                          cartProducts
+                              .filter((product) => !ownCategoryId(product) && product.master?.masterId)
+                              .map((product) => product.master?.masterId as string)
+                      ),
+                  ];
+                  const masters = masterIdsToResolve.length
+                      ? await fetchProductsByIds(context, masterIdsToResolve, { expand: ['prices'] }).catch(
+                            (): ShopperProducts.schemas['Product'][] => []
+                        )
+                      : [];
+                  const masterCategoryId = new Map(masters.map((master) => [master.id, ownCategoryId(master)]));
 
-                // Distinct categories of the cart products, in cart order. Capped so a mixed cart stays cheap.
-                const categoryIds = [
-                    ...new Set(
-                        cartProducts
-                            .map(
-                                (product) =>
-                                    ownCategoryId(product) ??
-                                    (product.master?.masterId ? masterCategoryId.get(product.master.masterId) : undefined)
-                            )
-                            .filter((id): id is string => Boolean(id))
-                    ),
-                ].slice(0, 3);
-                if (categoryIds.length === 0) return [];
+                  // Distinct categories of the cart products, in cart order. Capped so a mixed cart stays cheap.
+                  const categoryIds = [
+                      ...new Set(
+                          cartProducts
+                              .map(
+                                  (product) =>
+                                      ownCategoryId(product) ??
+                                      (product.master?.masterId
+                                          ? masterCategoryId.get(product.master.masterId)
+                                          : undefined)
+                              )
+                              .filter((id): id is string => Boolean(id))
+                      ),
+                  ].slice(0, 3);
+                  if (categoryIds.length === 0) return [];
 
-                const cartProductIds = new Set(
-                    cartProducts
-                        .flatMap((product) => [product.id, product.master?.masterId])
-                        .filter((id): id is string => Boolean(id))
-                );
-                const pageSize = getConfig(context)?.search?.products?.hits?.limit ?? 24;
-                const pages = await Promise.all(
-                    categoryIds.map((categoryId) =>
-                        fetchSearchProducts(context, {
-                            refine: [`cgid=${categoryId}`],
-                            limit: pageSize,
-                            ...(currency ? { currency } : {}),
-                        })
-                    )
-                );
-                const seenProductIds = new Set<string>();
-                return pages
-                    .flatMap((page) => page.hits ?? [])
-                    .filter((product) => {
-                        if (
-                            !product.productId ||
-                            cartProductIds.has(product.productId) ||
-                            seenProductIds.has(product.productId)
-                        ) {
-                            return false;
-                        }
-                        seenProductIds.add(product.productId);
-                        return true;
-                    });
-            })
-            .catch((): ShopperSearch.schemas['ProductSearchHit'][] => []);
-        return categoryProductsPromise;
-    };
-
-    const cartMayAlsoLikePromise = uiConfig.pages.cart.showRecommendations
-          ? basketDataPromise
-              .then(({ productsByItemId }) => {
-                  const seen = new Set<string>();
-                  const products: ShopperProducts.schemas['Product'][] = [];
-                  for (const p of Object.values(productsByItemId)) {
-                      if (!seen.has(p.id)) {
-                          seen.add(p.id);
-                          products.push(p);
-                      }
-                  }
-                  return fetchProductRecommendations(
-                      { context, request },
-                      {
-                          name: EINSTEIN_RECOMMENDERS.CART_MAY_ALSO_LIKE,
-                          products,
-                          ...(currency ? { currency } : {}),
-                      }
+                  const cartProductIds = new Set(
+                      cartProducts
+                          .flatMap((product) => [product.id, product.master?.masterId])
+                          .filter((id): id is string => Boolean(id))
                   );
+                  const pageSize = getConfig(context)?.search?.products?.hits?.limit ?? 24;
+                  const pages = await Promise.all(
+                      categoryIds.map((categoryId) =>
+                          fetchSearchProducts(context, {
+                              refine: [`cgid=${categoryId}`],
+                              limit: pageSize,
+                              ...(currency ? { currency } : {}),
+                          })
+                      )
+                  );
+                  const seenProductIds = new Set<string>();
+                  return pages
+                      .flatMap((page) => page.hits ?? [])
+                      .filter((product) => {
+                          // Only suggest products the shopper can actually buy, and never one already in the cart.
+                          if (
+                              !product.productId ||
+                              product.orderable === false ||
+                              cartProductIds.has(product.productId) ||
+                              seenProductIds.has(product.productId)
+                          ) {
+                              return false;
+                          }
+                          seenProductIds.add(product.productId);
+                          return true;
+                      });
               })
-              .then(async (recommendation) => {
-                  const categoryProducts = await getCategoryProducts();
-                  return {
-                      ...recommendation,
-                      displayMessage: undefined,
-                      recs: categoryProducts.slice(0, Math.ceil(categoryProducts.length / 2)),
-                  };
-              })
-              .catch((): Recommendation => ({}))
-        : Promise.resolve<Recommendation>({});
+              .catch((): ShopperSearch.schemas['ProductSearchHit'][] => [])
+        : Promise.resolve([]);
 
-    const cartRecentlyViewedPromise = uiConfig.pages.cart.showRecommendations
-        ? fetchProductRecommendations(
-                  { context, request },
-                  { name: EINSTEIN_RECOMMENDERS.CART_RECENTLY_VIEWED, ...(currency ? { currency } : {}) }
-              ).then(async (recommendation) => {
-                  const categoryProducts = await getCategoryProducts();
-                  return {
-                      ...recommendation,
-                      displayMessage: undefined,
-                      recs: categoryProducts.slice(Math.ceil(categoryProducts.length / 2)),
-                  };
-              })
-        : Promise.resolve<Recommendation>({});
+    // Derived in the loader (not the component) so each carousel gets a stable promise reference.
+    const cartMayAlsoLikePromise = categoryProductsPromise.then((products) =>
+        products.slice(0, Math.ceil(products.length / 2))
+    );
+    const cartMoreFromCategoriesPromise = categoryProductsPromise.then((products) =>
+        products.slice(Math.ceil(products.length / 2))
+    );
 
     // Rule-based bonus carousels live below the fold. Defer them so the cart shell paints without waiting on N
     // parallel productSearch calls. The helper isolates per-promotion failures and never throws, so we don't need a
@@ -294,7 +253,7 @@ export const loader = ({ context, request }: Route.LoaderArgs): CartPageData => 
         basketDataPromise,
         wishlistProductIdsPromise,
         cartMayAlsoLikePromise,
-        cartRecentlyViewedPromise,
+        cartMoreFromCategoriesPromise,
         ruleBasedBonusProductsPromise,
         basketSnapshot: getBasketSnapshot(context),
         pageUrl,
@@ -336,7 +295,7 @@ export default function Cart(): ReactElement {
     // re-suspending would unmount CartBody and lose its useState pinning. Pinning at the route
     // level keeps the rec promise references stable across cart revalidations.
     const [pinnedMayAlsoLikePromise] = useState(() => pageData.cartMayAlsoLikePromise);
-    const [pinnedRecentlyViewedPromise] = useState(() => pageData.cartRecentlyViewedPromise);
+    const [pinnedMoreFromCategoriesPromise] = useState(() => pageData.cartMoreFromCategoriesPromise);
 
     // Reserve vertical space for the recommendation carousels while their promises (and the
     // basket itself) are loading. The upper carousel can sit in the initial viewport on small
@@ -346,19 +305,19 @@ export default function Cart(): ReactElement {
     // and the live slot are undefined so CartContent / CartSkeleton render no recommendation region.
     const mayAlsoLikeTitle = tProduct('recommendations.youMightAlsoLike');
     // The cart's second carousel is category based (not a viewing history), so it gets its own heading.
-    const recentlyViewedTitle = t('trendingNearYou');
+    const moreFromCategoriesTitle = t('moreFromCategories');
     const mayAlsoLikeSkeleton = uiConfig.pages.cart.showRecommendations ? (
         <ProductRecommendationSkeleton title={mayAlsoLikeTitle} className="max-w-none px-0" />
     ) : undefined;
-    const recentlyViewedSkeleton = uiConfig.pages.cart.showRecommendations ? (
-        <ProductRecommendationSkeleton title={recentlyViewedTitle} className="max-w-none px-0" />
+    const moreFromCategoriesSkeleton = uiConfig.pages.cart.showRecommendations ? (
+        <ProductRecommendationSkeleton title={moreFromCategoriesTitle} className="max-w-none px-0" />
     ) : undefined;
     const categoryRecommendationsSlot = uiConfig.pages.cart.showRecommendations ? (
         <CartCategoryRecommendations
             mayAlsoLikePromise={pinnedMayAlsoLikePromise}
-            recentlyViewedPromise={pinnedRecentlyViewedPromise}
+            moreFromCategoriesPromise={pinnedMoreFromCategoriesPromise}
             mayAlsoLikeTitle={mayAlsoLikeTitle}
-            recentlyViewedTitle={recentlyViewedTitle}
+            moreFromCategoriesTitle={moreFromCategoriesTitle}
         />
     ) : undefined;
 
@@ -376,7 +335,7 @@ export default function Cart(): ReactElement {
                     <CartSkeleton
                         productItemCount={pageData.basketSnapshot?.uniqueProductCount ?? 0}
                         mayAlsoLikeSlot={mayAlsoLikeSkeleton}
-                        recentlyViewedSlot={recentlyViewedSkeleton}
+                        moreFromCategoriesSlot={moreFromCategoriesSkeleton}
                     />
                 }>
                 <Await resolve={pageData.basketDataPromise} errorElement={<CartLoadError />}>

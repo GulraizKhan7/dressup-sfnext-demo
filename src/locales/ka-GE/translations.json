@@ -278,6 +278,9 @@
     "closeAriaLabel": "დახურვა",
     "each": "თითოეული"
   },
+  "cart": {
+    "moreFromCategories": "მეტი ამ კატეგორიებიდან"
+  },
   "product": {
     "fulfillment": {
       "delivery": "მიწოდება",

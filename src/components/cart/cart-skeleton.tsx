@@ -49,11 +49,11 @@ function CartEmptySkeleton(): ReactElement {
 export default function CartSkeleton({
     productItemCount,
     mayAlsoLikeSlot,
-    recentlyViewedSlot,
+    moreFromCategoriesSlot,
 }: {
     productItemCount?: number;
     mayAlsoLikeSlot?: ReactNode;
-    recentlyViewedSlot?: ReactNode;
+    moreFromCategoriesSlot?: ReactNode;
 }): ReactElement {
     const { t } = useTranslation('cart');
 
@@ -204,7 +204,7 @@ export default function CartSkeleton({
                 </div>
                 <div className="mt-8 space-y-12">
                     {mayAlsoLikeSlot}
-                    {recentlyViewedSlot}
+                    {moreFromCategoriesSlot}
                 </div>
             </div>
 

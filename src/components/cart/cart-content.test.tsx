@@ -17,9 +17,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { useState } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { getTranslation } from '@salesforce/storefront-next-runtime/i18n';
-import type { Recommendation } from '@/hooks/recommenders/use-recommenders';
-import ProductRecommendations from '@/components/product-recommendations';
-import { EINSTEIN_RECOMMENDERS } from '@/lib/product/einstein-recommenders';
+import CartCategoryRecommendations from './cart-category-recommendations';
 
 const { t } = getTranslation();
 
@@ -60,6 +58,7 @@ vi.mock('@/extensions/ratings-reviews/providers/product-reviews-context', () => 
 // @sfdc-extension-block-end SFDC_EXT_RATINGS_REVIEWS
 
 vi.mock('@/hooks/use-deferred-render', () => ({
+    useDeferredRender: () => true,
     useDeferredRenderSequence: () => 0,
 }));
 
@@ -101,34 +100,26 @@ const buildRecs = (productNames: string[]) =>
         ],
     }));
 
-// Default empty recommendation promises — server resolved with no recs.
-const emptyRecsPromise = (): Promise<Recommendation> => Promise.resolve({});
+// Default empty recommendation promises — server resolved with no products.
+const emptyRecsPromise = (): Promise<ReturnType<typeof buildRecs>> => Promise.resolve([]);
 
 /**
  * Build both recommendation slots the same way the cart route does — pinning is the route's concern,
- * so tests pass the promises directly to <ProductRecommendations>.
+ * so tests pass the promises directly to <CartCategoryRecommendations>.
  */
 const buildCategoryRecommendationsSlot = ({
     cartMayAlsoLikePromise = emptyRecsPromise(),
-    cartRecentlyViewedPromise = emptyRecsPromise(),
+    cartMoreFromCategoriesPromise = emptyRecsPromise(),
 }: {
-    cartMayAlsoLikePromise?: Promise<Recommendation>;
-    cartRecentlyViewedPromise?: Promise<Recommendation>;
+    cartMayAlsoLikePromise?: Promise<ReturnType<typeof buildRecs>>;
+    cartMoreFromCategoriesPromise?: Promise<ReturnType<typeof buildRecs>>;
 } = {}) => (
-    <>
-        <ProductRecommendations
-            recommenderName={EINSTEIN_RECOMMENDERS.CART_MAY_ALSO_LIKE}
-            recommenderTitle={t('product:recommendations.youMightAlsoLike')}
-            data={cartMayAlsoLikePromise}
-            className="max-w-none px-0"
-        />
-        <ProductRecommendations
-            recommenderName={EINSTEIN_RECOMMENDERS.CART_RECENTLY_VIEWED}
-            recommenderTitle={t('product:recommendations.recentlyViewed')}
-            data={cartRecentlyViewedPromise}
-            className="max-w-none px-0"
-        />
-    </>
+    <CartCategoryRecommendations
+        mayAlsoLikePromise={cartMayAlsoLikePromise}
+        moreFromCategoriesPromise={cartMoreFromCategoriesPromise}
+        mayAlsoLikeTitle={t('product:recommendations.youMightAlsoLike')}
+        moreFromCategoriesTitle={t('cart:moreFromCategories')}
+    />
 );
 
 // `<Await resolve>` tracks promises by identity. Share a single already-resolved instance for
@@ -785,10 +776,7 @@ describe('CartContent', () => {
                 productsByItemId: mockProductMap,
                 bonusProductsById: mockBonusProductsById,
                 categoryRecommendationsSlot: buildCategoryRecommendationsSlot({
-                    cartMayAlsoLikePromise: Promise.resolve({
-                        recommenderName: 'product-to-product-einstein',
-                        recs: buildRecs(['Recommended Shirt', 'Recommended Pants']),
-                    }),
+                    cartMayAlsoLikePromise: Promise.resolve(buildRecs(['Recommended Shirt', 'Recommended Pants'])),
                 }),
             });
 
@@ -797,21 +785,18 @@ describe('CartContent', () => {
             expect(screen.getByText('Recommended Pants')).toBeInTheDocument();
         });
 
-        test('renders the "recently viewed" carousel with its translated title and product', async () => {
+        test('renders the "more from these categories" carousel with its translated title and product', async () => {
             renderCartContent({
                 basket: mockBasket,
                 productsByItemId: mockProductMap,
                 bonusProductsById: mockBonusProductsById,
                 categoryRecommendationsSlot: buildCategoryRecommendationsSlot({
-                    cartRecentlyViewedPromise: Promise.resolve({
-                        recommenderName: 'viewed-recently-einstein',
-                        recs: buildRecs(['Previously Viewed Hat']),
-                    }),
+                    cartMoreFromCategoriesPromise: Promise.resolve(buildRecs(['Category Hat'])),
                 }),
             });
 
-            expect(await screen.findByText(t('product:recommendations.recentlyViewed'))).toBeInTheDocument();
-            expect(screen.getByText('Previously Viewed Hat')).toBeInTheDocument();
+            expect(await screen.findByText(t('cart:moreFromCategories'))).toBeInTheDocument();
+            expect(screen.getByText('Category Hat')).toBeInTheDocument();
         });
 
         test('renders nothing for either recommender when the resolved recs arrays are empty', async () => {
@@ -827,7 +812,7 @@ describe('CartContent', () => {
                 expect(screen.getByTestId('sf-cart-container')).toBeInTheDocument();
             });
             expect(screen.queryByText(t('product:recommendations.youMightAlsoLike'))).not.toBeInTheDocument();
-            expect(screen.queryByText(t('product:recommendations.recentlyViewed'))).not.toBeInTheDocument();
+            expect(screen.queryByText(t('cart:moreFromCategories'))).not.toBeInTheDocument();
         });
 
         test('renders nothing for either recommender when the cart is empty', async () => {
@@ -845,7 +830,7 @@ describe('CartContent', () => {
                 expect(screen.getByTestId('sf-cart-empty')).toBeInTheDocument();
             });
             expect(screen.queryByText(t('product:recommendations.youMightAlsoLike'))).not.toBeInTheDocument();
-            expect(screen.queryByText(t('product:recommendations.recentlyViewed'))).not.toBeInTheDocument();
+            expect(screen.queryByText(t('cart:moreFromCategories'))).not.toBeInTheDocument();
         });
     });
 
