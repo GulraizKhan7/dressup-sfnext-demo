@@ -1,6 +1,6 @@
 import { Search, User, ChevronDown } from 'lucide-react';
-import { type CSSProperties, useEffect, useRef } from 'react';
-import { useRouteLoaderData } from 'react-router';
+import { type CSSProperties, Suspense, useEffect, useRef } from 'react';
+import { Await, useRouteLoaderData } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import SearchBar from '@/components/header/search';
 import ResponsiveNavigationMenu from '@/components/navigation-menu-mega';
@@ -9,6 +9,7 @@ import CartBadge from '@/components/header/cart-badge';
 import { UserMenu } from '@/components/header/user-actions/user-menu';
 import { useAuth } from '@/providers/auth';
 import type { LoaderData as AppLoaderData } from '@/routes/_app';
+import type { loader as rootLoader } from '@/root';
  
 const INK = '#111111';
 const MUTED = '#4b5563';
@@ -46,32 +47,41 @@ const iconStyle = (color: string) => ({ color, stroke: color, fill: 'none', disp
  
 /**
  * Account trigger: opens the shared user menu (Sign In / Create account for guests, account links and Log out for
- * registered shoppers). Uses the site-aware routes instead of a hard-coded href.
+ * registered shoppers). Uses the site-aware routes instead of a hard-coded href. Registered shoppers see their name;
+ * it streams in from the root loader, so the generic "My Account" label shows until it resolves (or if it fails).
  */
 function HeaderUserMenu() {
   const session = useAuth();
   const { t } = useTranslation('header');
   const { t: tAccount } = useTranslation('account');
+  const rootData = useRouteLoaderData<typeof rootLoader>('root');
   const isAuthenticated = session?.userType === 'registered';
-  const label = isAuthenticated ? tAccount('myAccount') : t('signIn');
+  const defaultLabel = isAuthenticated ? tAccount('myAccount') : t('signIn');
+
+  const renderTrigger = (label: string) => (
+    <button
+      type="button"
+      className="flex cursor-pointer items-center gap-1"
+      style={{ color: INK }}
+      aria-label={label}
+      data-testid="user-account-trigger"
+    >
+      <User size={22} strokeWidth={1.5} style={iconStyle(INK)} />
+      <span className="max-w-[120px] truncate text-[14px] font-medium hidden md:inline">{label}</span>
+      <ChevronDown size={14} className="hidden md:inline" style={iconStyle(MUTED)} />
+    </button>
+  );
+
+  if (!isAuthenticated || !rootData?.customerName) {
+    return <UserMenu isAuthenticated={isAuthenticated} trigger={renderTrigger(defaultLabel)} />;
+  }
 
   return (
-    <UserMenu
-      isAuthenticated={isAuthenticated}
-      trigger={
-        <button
-          type="button"
-          className="flex cursor-pointer items-center gap-1"
-          style={{ color: INK }}
-          aria-label={label}
-          data-testid="user-account-trigger"
-        >
-          <User size={22} strokeWidth={1.5} style={iconStyle(INK)} />
-          <span className="text-[14px] font-medium hidden md:inline">{label}</span>
-          <ChevronDown size={14} className="hidden md:inline" style={iconStyle(MUTED)} />
-        </button>
-      }
-    />
+    <Suspense fallback={<UserMenu isAuthenticated trigger={renderTrigger(defaultLabel)} />}>
+      <Await resolve={rootData.customerName} errorElement={<UserMenu isAuthenticated trigger={renderTrigger(defaultLabel)} />}>
+        {(name: string | null) => <UserMenu isAuthenticated trigger={renderTrigger(name ?? defaultLabel)} />}
+      </Await>
+    </Suspense>
   );
 }
 

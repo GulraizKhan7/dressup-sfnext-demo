@@ -105,6 +105,7 @@ import { usePasskeyRegistration } from '@/hooks/use-passkey-registration';
 
 // Lib/Utils
 import type { PublicSessionData } from '@/lib/api/types';
+import { getCurrentCustomer } from '@/lib/api/customer.server';
 import { useCurrency } from '@/lib/currency/use-currency';
 import { getTranslation } from '@salesforce/storefront-next-runtime/i18n';
 import { PageViewTracker } from '@/analytics/page-view-tracker';
@@ -197,6 +198,9 @@ export const loader = ({
 }: Route.LoaderArgs): {
     // Public auth data - only non-sensitive fields, safe to serialize
     clientAuth: PublicSessionData;
+    // Display name of the signed-in shopper for the header. Deferred so it never blocks first paint; resolves to
+    // null for guests (no API call) and when the profile cannot be read.
+    customerName: Promise<string | null>;
     // Client-safe view: extractClientConfig strips app.serverExtension before this loader
     // returns, since React Router serializes the loader return into the SSR hydration
     // payload and reaches the browser. Server-only reads of those values still go through
@@ -253,6 +257,13 @@ export const loader = ({
     // Extract only non-sensitive fields for client - tokens stay server-side only
     const clientAuth = getPublicSessionData(session);
 
+    const customerName: Promise<string | null> =
+        clientAuth.userType === 'registered'
+            ? getCurrentCustomer(context)
+                  .then((customer) => customer?.firstName || customer?.lastName || null)
+                  .catch(() => null)
+            : Promise.resolve(null);
+
     const requestUrl = new URL(request.url);
 
     const seoMeta = buildSeoMetaDescriptors({
@@ -285,6 +296,7 @@ export const loader = ({
         correlationId,
         maintenance,
         clientAuth,
+        customerName,
         seoMeta,
         getI18next: () => i18next,
         errorTranslations: (i18next.getResourceBundle(i18next.language, 'routeError') as Record<string, unknown>) ?? {},
