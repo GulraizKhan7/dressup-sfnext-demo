@@ -778,22 +778,23 @@ describe('CheckoutFormPage', () => {
             expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         });
 
-        test('uses responsive order classes to move sidebar right on lg while staying above main on md', async () => {
+        test('uses a two-column grid on lg with the sidebar on the right and still above main on md', async () => {
             const { container } = await renderCheckoutPage();
 
-            const grid = container.querySelector('.grid.grid-cols-1.lg\\:grid-cols-3.gap-8');
+            const grid = container.querySelector('.grid.grid-cols-1');
             expect(grid).toBeInTheDocument();
+            expect(grid?.className).toContain('lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]');
 
             const sidebar = screen.getByTestId('checkout-order-summary-sidebar');
             expect(sidebar.className).toContain('md:order-1');
             expect(sidebar.className).toContain('lg:order-2');
-            expect(sidebar.className).toContain('lg:col-span-1');
+            expect(sidebar.className).toContain('lg:col-start-2');
 
-            const mainContent = screen.getByTestId('express-payments').closest('div.space-y-6');
+            const mainContent = screen.getByTestId('express-payments').closest('div.space-y-4');
             expect(mainContent).toBeInTheDocument();
             expect(mainContent?.className).toContain('md:order-2');
             expect(mainContent?.className).toContain('lg:order-1');
-            expect(mainContent?.className).toContain('lg:col-span-2');
+            expect(mainContent?.className).toContain('lg:col-start-1');
         });
 
         test('place order button is DOM-after sidebar so promo code is tabbed before place order (WCAG 2.4.3)', async () => {

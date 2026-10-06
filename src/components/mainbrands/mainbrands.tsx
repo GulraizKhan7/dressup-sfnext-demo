@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
 
 const brands = [
@@ -35,12 +36,13 @@ const brands = [
 ];
 
 export default function MainBrands() {
+  const { t } = useTranslation('home');
   return (
     <section className="w-full max-w-[1900px] mx-auto px-6 lg:px-12 py-12 bg-white font-sans select-none">
       {/* Section Header with Arrow */}
       <div className="flex items-center gap-2 mb-6 cursor-pointer group">
         <h2 className="text-xl lg:text-2xl font-bold text-gray-900 tracking-tight group-hover:underline">
-          Get to know Georgian brands
+          {t('main.brands.title')}
         </h2>
         <span className="text-gray-900 group-hover:translate-x-1 transition-transform">
           <ArrowRight size={20} />
@@ -80,7 +82,7 @@ export default function MainBrands() {
                 >
                   <img
                     src={prodImg}
-                    alt="Product"
+                    alt={t('main.brands.productAlt')}
                     className="w-full h-full object-cover object-center hover:scale-110 transition-transform duration-300"
                   />
                 </div>

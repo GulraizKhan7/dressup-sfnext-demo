@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { TFunction } from 'i18next';
 import type { FilterValue } from './types';
 
 /** Buttons the filter bar always shows (Brand, Size, Price, Color); each opens its row in the filters drawer. */
@@ -78,3 +79,26 @@ export const STATIC_FACETS: StaticFacet[] = [
     { attributeId: 'closure', label: 'Closure', values: values('Zipper', 'Button', 'Pullover', 'Drawstring') },
     { attributeId: 'support_level', label: 'Support Level', values: values('Light', 'Medium', 'High') },
 ];
+
+/** Stable translation-key segment for a facet value, e.g. `Under $25` -> `under_25`. */
+const valueKey = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+/**
+ * Localizes the placeholder facets for display. Only `label` changes: `value` stays the English source string
+ * so the (local) selection state does not depend on the active language.
+ */
+export const localizeStaticFacets = (t: TFunction): StaticFacet[] =>
+    STATIC_FACETS.map((facet) => ({
+        ...facet,
+        label: t(`category:staticFacets.${facet.attributeId}.label`, { defaultValue: facet.label }),
+        values: facet.values.map((facetValue) => ({
+            ...facetValue,
+            label: t(`category:staticFacets.${facet.attributeId}.values.${valueKey(String(facetValue.value))}`, {
+                defaultValue: String(facetValue.label),
+            }),
+        })) as FilterValue[],
+    }));

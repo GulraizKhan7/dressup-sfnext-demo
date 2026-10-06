@@ -35,13 +35,14 @@ vi.mock('@salesforce/storefront-next-runtime/config', () => ({
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
-        t: (key: string, options?: { count?: number }) => {
+        t: (key: string, options?: { count?: number; defaultValue?: string }) => {
             if (key === 'banner.counting') return 'Counting products...';
             if (key === 'banner.productsAvailable') {
                 const count = options?.count ?? 0;
                 return count === 1 ? '1 product available' : `${count} products available`;
             }
-            return key;
+            // Like real i18next, fall back to `defaultValue` for keys without a translation (category names).
+            return options?.defaultValue ?? key;
         },
     }),
 }));

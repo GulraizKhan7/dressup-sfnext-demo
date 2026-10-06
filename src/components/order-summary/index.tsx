@@ -84,6 +84,8 @@ interface OrderSummaryProps {
     className?: string;
     inventoryValidation?: CartInventoryValidationResult;
     surface?: 'cart' | 'checkout';
+    /** Overrides the "Subtotal" label (the checkout page shows "Your items"). */
+    subtotalLabel?: string;
 }
 
 /**
@@ -168,6 +170,7 @@ interface SummaryBodyContentProps {
     isEstimate: boolean;
     showTotal: boolean;
     showPromoCodeForm: boolean;
+    subtotalLabel?: string;
 }
 
 function SummaryBodyContent({
@@ -186,6 +189,7 @@ function SummaryBodyContent({
     isEstimate,
     showTotal,
     showPromoCodeForm,
+    subtotalLabel,
 }: SummaryBodyContentProps): ReactElement {
     return (
         <>
@@ -205,7 +209,7 @@ function SummaryBodyContent({
                 {/* Subtotal */}
                 <UITarget targetId="sfcc.orderSummary.subtotal.before" />
                 <UITarget targetId="sfcc.orderSummary.subtotal">
-                    <dt>{t('summary.subtotal')}</dt>
+                    <dt>{subtotalLabel ?? t('summary.subtotal')}</dt>
                     <dd className="justify-self-end">
                         {formatCurrency(basket?.productSubTotal ?? 0, i18nLanguage, currency)}
                     </dd>
@@ -352,6 +356,7 @@ export default function OrderSummary({
     className,
     inventoryValidation,
     surface,
+    subtotalLabel,
 }: OrderSummaryProps): ReactElement {
     const { t, i18n } = useTranslation('cart');
     const { currency } = useSite();
@@ -406,6 +411,7 @@ export default function OrderSummary({
                 isEstimate={isEstimate}
                 showTotal={showTotal}
                 showPromoCodeForm={showPromoCodeForm}
+                subtotalLabel={subtotalLabel}
             />
             {showCheckoutAction && (
                 <>

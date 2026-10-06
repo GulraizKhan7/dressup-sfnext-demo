@@ -36,6 +36,7 @@ import { NavigationMenuLink } from '@/components/ui/navigation-menu';
 import { cn } from '@/lib/utils';
 import { useSubCategory } from '@/components/navigation-menu/context';
 import { routes, routeHref } from '@/route-paths';
+import { useCategoryName } from '@/hooks/use-category-name';
 import { Component } from '@/lib/decorators/component';
 import { RegionDefinition } from '@/lib/decorators';
 import { getRegionIds } from '@/lib/decorators/region-definition';
@@ -116,6 +117,7 @@ function CategoryBanner({
     ...props
 }: ComponentPropsWithoutRef<'a'> & { category: ShopperProducts.schemas['Category'] }) {
     const config = useConfig();
+    const categoryName = useCategoryName();
     const imageSrc = toImageUrl({ src: (category?.c_slotBannerImage as string) ?? '', config });
 
     // Transform any image URLs in the HTML banner to use DIS with WebP optimization
@@ -128,7 +130,7 @@ function CategoryBanner({
                     <img
                         className="object-contain w-full max-w-full max-h-[512px]"
                         src={imageSrc}
-                        alt={category.name}
+                        alt={categoryName(category.name)}
                     />
                 ) : (
                     // oxlint-disable-next-line react/no-danger
@@ -212,27 +214,6 @@ function MegaMenuFeaturedSlot({
     return renderResolved(embeddedComponent);
 }
 
-function ShopAllCategoryLink({ category }: { category: ShopperProducts.schemas['Category'] }): ReactElement {
-    const { t } = useTranslation('header');
-    return (
-        <NavigationMenuLink asChild>
-            <NavLink
-                to={routeHref(routes.category, { categoryId: category.id })}
-                // When the panel has a featured column it is a 2-col grid whose other
-                // children are the submenu list and the banner/region aside. Span both
-                // columns so this link sits on its own row above them and the list and
-                // banner stay side by side. On panels with no featured column the
-                // container is not a grid, so col-span is inert.
-                className="block md:col-span-2 text-sm font-medium leading-5 underline underline-offset-4 hover:!bg-transparent focus:!bg-transparent hover:!text-header-menu-foreground/60 focus:!text-header-menu-foreground/60 transition-colors">
-                {t('shopAllCategory', {
-                    category: category.name,
-                    defaultValue: `Shop all ${category.name}`,
-                })}
-            </NavLink>
-        </NavigationMenuLink>
-    );
-}
-
 function hasSubcategories(category: ShopperProducts.schemas['Category']): boolean {
     return (
         typeof category.onlineSubCategoriesCount === 'number' &&
@@ -254,6 +235,7 @@ function MobileMenuCategory({
     onNavigate: () => void;
 }): ReactElement {
     const { t } = useTranslation('header');
+    const categoryName = useCategoryName();
     const enrichedCategory = useSubCategory(rawCategory.id);
     const category = enrichedCategory ?? rawCategory;
     const hasChildren = hasSubcategories(category);
@@ -272,7 +254,7 @@ function MobileMenuCategory({
                         'block py-2 text-sm font-medium hover:opacity-70 transition-opacity',
                         level > 1 && 'text-header-foreground/80'
                     )}>
-                    {subcategory.name}
+                    {categoryName(subcategory.name)}
                 </NavLink>
                 {subcategory.categories?.length ? (
                     <ul className="pl-4 space-y-1">{renderSubcategoryLinks(subcategory.categories, level + 1)}</ul>
@@ -287,7 +269,7 @@ function MobileMenuCategory({
                     to={routeHref(routes.category, { categoryId: category.id })}
                     onClick={onNavigate}
                     className="flex-1 py-3 text-base font-medium hover:opacity-70 transition-opacity">
-                    {category.name}
+                    {categoryName(category.name)}
                 </NavLink>
 
                 {hasChildren && (
@@ -299,12 +281,12 @@ function MobileMenuCategory({
                         aria-label={
                             isExpanded
                                 ? t('collapseCategory', {
-                                      category: category.name,
-                                      defaultValue: `Collapse ${category.name}`,
+                                      category: categoryName(category.name),
+                                      defaultValue: `Collapse ${categoryName(category.name)}`,
                                   })
                                 : t('expandCategory', {
-                                      category: category.name,
-                                      defaultValue: `Expand ${category.name}`,
+                                      category: categoryName(category.name),
+                                      defaultValue: `Expand ${categoryName(category.name)}`,
                                   })
                         }
                         aria-expanded={isExpanded}>
@@ -435,6 +417,7 @@ export default function ResponsiveNavigationMenu({
 }: ResponsiveNavigationMenuProps): ReactElement {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { t } = useTranslation('header');
+    const categoryName = useCategoryName();
 
     const defaultListStyle = {
         width: '100%',
@@ -456,7 +439,11 @@ export default function ResponsiveNavigationMenu({
             // through the panel's links and banner.
             return {
                 className: cn(
-                    'text-sm leading-5',
+                    isGroupHeading
+                        ? '!w-full !justify-self-start !text-left !text-[16px] leading-5'
+                        : isSubcategory
+                          ? '!justify-start !text-left text-base leading-5'
+                          : 'text-sm leading-5',
                     isGroupHeading ? 'font-semibold' : 'font-normal',
                     categoryLabels && isSubcategory && 'px-0 py-1',
                     isSubcategory &&
@@ -563,12 +550,13 @@ export default function ResponsiveNavigationMenu({
                                 propsList={({ parent, categories: subCategories, level }) => {
                                     if (categoryLabels && level === 1) {
                                         return {
-                                            className: 'grid grid-cols-2 gap-x-8 gap-y-5 p-0 md:grid-cols-4',
+                                            className:
+                                                'mx-auto grid w-full max-w-6xl grid-cols-2 justify-items-center gap-x-8 gap-y-5 p-0 text-center md:grid-cols-4',
                                         };
                                     }
                                     if (categoryLabels && level > 1) {
                                         return {
-                                            className: 'mt-1 flex flex-col gap-1 p-0',
+                                            className: 'mt-1 flex flex-col items-stretch gap-1 p-0 text-left',
                                         };
                                     }
                                     if (level === 1) {
@@ -588,18 +576,16 @@ export default function ResponsiveNavigationMenu({
                                     }
                                 }}
                                 propsListItem={({ level }) =>
-                                    categoryLabels && level >= 1 ? { className: 'min-w-0 list-none' } : undefined
+                                    categoryLabels && level >= 1
+                                        ? {
+                                              className: cn(
+                                                  'min-w-0 list-none',
+                                                  level === 1 && 'flex w-full flex-col justify-self-start'
+                                              ),
+                                          }
+                                        : undefined
                                 }
                                 propsElement={getElementProps}
-                                renderSlotListBefore={({ level, parent }) => {
-                                    // The top-level trigger only opens the panel (it never
-                                    // navigates, per WCAG 3.2.2). Give every panel an explicit
-                                    // link to the parent category's landing page so it stays
-                                    // reachable whether or not the category has a banner.
-                                    if (level === 1 && parent) {
-                                        return <ShopAllCategoryLink category={parent} />;
-                                    }
-                                }}
                                 renderSlotListAfter={({ level, parent }) => {
                                     if (level !== 1 || !parent) return null;
                                     // The dropdown renders multiple complementary landmarks (one per open
@@ -613,8 +599,8 @@ export default function ResponsiveNavigationMenu({
                                             regionId={regionIdFor(parent.id)}
                                             embeddedComponent={embeddedComponent}
                                             label={t('featuredContent', {
-                                                category: parent.name,
-                                                defaultValue: `${parent.name} featured content`,
+                                                category: categoryName(parent.name),
+                                                defaultValue: `${categoryName(parent.name)} featured content`,
                                             })}
                                         />
                                     );

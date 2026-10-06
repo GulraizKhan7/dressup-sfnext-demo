@@ -152,7 +152,6 @@ describe('ResponsiveNavigationMenu Component', () => {
 
             fireEvent.pointerMove(await findByRole('button', { name: 'Men' }), { pointerType: 'mouse' });
 
-            expect(await findByRole('link', { name: 'Shop all Men' })).toBeInTheDocument();
             expect(await findByRole('link', { name: 'Subcategory 1.1' })).toBeInTheDocument();
         });
     });

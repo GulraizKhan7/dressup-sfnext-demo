@@ -233,7 +233,7 @@ export default function Payment({
 
                                     {(savedPaymentMethods.length === 0 || paymentRadioValue === 'new') && (
                                         <div className="space-y-2">
-                                            <div className="rounded-ui border border-input bg-card p-4 space-y-4">
+                                            <div className="space-y-4">
                                                 {(savedPaymentMethods.length === 0 || paymentRadioValue === 'new') && (
                                                     <div className="flex items-center gap-2">
                                                         <RadioGroup
@@ -273,7 +273,7 @@ export default function Payment({
                                                         name="savePaymentToProfile"
                                                         render={({ field }) => {
                                                             return (
-                                                                <FormItem className="space-y-0">
+                                                                <FormItem className="space-y-0 pt-2">
                                                                     <label
                                                                         htmlFor={field.name}
                                                                         className="flex cursor-pointer items-start gap-3">
@@ -473,11 +473,11 @@ export default function Payment({
                                     !billingAddress ||
                                     isSameBillingAndShippingAddress(billingAddress, shippingAddress) ? (
                                         <p className="text-sm font-normal leading-5 text-foreground">
-                                            {`Billing: ${t('payment.sameAsShippingAddress')}`}
+                                            {`${t('payment.billingLabel')} ${t('payment.sameAsShippingAddress')}`}
                                         </p>
                                     ) : (
                                         <div className="text-sm font-normal leading-5 text-foreground">
-                                            <p>Billing:</p>
+                                            <p>{t('payment.billingLabel')}</p>
                                             <p>{formatAddress(billingAddress).nameLine}</p>
                                             <p>{formatAddress(billingAddress).addressLine}</p>
                                         </div>

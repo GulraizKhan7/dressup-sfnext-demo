@@ -15,45 +15,22 @@
  */
 import { cn } from '@/lib/utils';
 import { CheckIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { CHECKOUT_STEPS, type CheckoutStep } from './utils/checkout-context-types';
 
 interface TimelineStep {
     id: CheckoutStep;
-    title: string;
-    description: string;
+    /** Key under `checkout:progress.steps` holding this step's `title` and `description`. */
+    translationKey: 'contactInfo' | 'pickup' | 'shippingAddress' | 'shippingOptions' | 'payment' | 'placeOrder';
 }
 
 const TIMELINE_STEPS: TimelineStep[] = [
-    {
-        id: CHECKOUT_STEPS.CONTACT_INFO,
-        title: 'Contact Info',
-        description: 'Email address',
-    },
-    {
-        id: CHECKOUT_STEPS.PICKUP,
-        title: 'Pickup',
-        description: 'Store pickup',
-    },
-    {
-        id: CHECKOUT_STEPS.SHIPPING_ADDRESS,
-        title: 'Shipping',
-        description: 'Delivery address',
-    },
-    {
-        id: CHECKOUT_STEPS.SHIPPING_OPTIONS,
-        title: 'Delivery',
-        description: 'Shipping method',
-    },
-    {
-        id: CHECKOUT_STEPS.PAYMENT,
-        title: 'Payment',
-        description: 'Payment method',
-    },
-    {
-        id: CHECKOUT_STEPS.PLACE_ORDER,
-        title: 'Place Order',
-        description: 'Place order',
-    },
+    { id: CHECKOUT_STEPS.CONTACT_INFO, translationKey: 'contactInfo' },
+    { id: CHECKOUT_STEPS.PICKUP, translationKey: 'pickup' },
+    { id: CHECKOUT_STEPS.SHIPPING_ADDRESS, translationKey: 'shippingAddress' },
+    { id: CHECKOUT_STEPS.SHIPPING_OPTIONS, translationKey: 'shippingOptions' },
+    { id: CHECKOUT_STEPS.PAYMENT, translationKey: 'payment' },
+    { id: CHECKOUT_STEPS.PLACE_ORDER, translationKey: 'placeOrder' },
 ];
 
 interface CheckoutProgressProps {
@@ -124,8 +101,9 @@ function StepCircle({ status, index }: { status: StepStatus; index: number }) {
 }
 
 export function CheckoutProgress({ currentStep, completedSteps = [], className }: CheckoutProgressProps) {
+    const { t } = useTranslation('checkout');
     return (
-        <nav aria-label="Checkout progress" className={cn('w-full', className)}>
+        <nav aria-label={t('progress.ariaLabel')} className={cn('w-full', className)}>
             {/* Mobile Timeline - Horizontal */}
             <ol className="flex items-center justify-between mb-4 md:hidden">
                 {TIMELINE_STEPS.map((step, index) => {
@@ -144,7 +122,7 @@ export function CheckoutProgress({ currentStep, completedSteps = [], className }
                                 {/* Step Title - Mobile */}
                                 <div className="text-xs text-center mt-1 max-w-16">
                                     <div className={cn('font-medium truncate', STEP_TITLE_STYLES.mobile[status])}>
-                                        {step.title}
+                                        {t(`progress.steps.${step.translationKey}.title`)}
                                     </div>
                                 </div>
                             </div>
@@ -182,10 +160,10 @@ export function CheckoutProgress({ currentStep, completedSteps = [], className }
                             {/* Step Content */}
                             <div className="flex-1 min-w-0">
                                 <div className={cn('text-sm font-medium', STEP_TITLE_STYLES.desktop[status])}>
-                                    {step.title}
+                                    {t(`progress.steps.${step.translationKey}.title`)}
                                 </div>
                                 <div className={cn('text-xs mt-1', STEP_DESCRIPTION_STYLES[status])}>
-                                    {step.description}
+                                    {t(`progress.steps.${step.translationKey}.description`)}
                                 </div>
                             </div>
                         </li>

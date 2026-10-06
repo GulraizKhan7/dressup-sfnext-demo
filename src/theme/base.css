@@ -86,9 +86,28 @@
    mobile summary sits outside the wrapper and stays borderless. */
 :where([data-testid="account-layout"]) [data-slot="card"],
 :where([data-section="auth"]) [data-slot="card"],
-:where([data-section="checkout"]) [data-slot="card"],
 :where([data-section="order-confirmation"]) [data-slot="card"],
 :where([data-slot="order-summary"]) [data-slot="card"] {
     --ui-border-width: 1px;
 }
 
+/* Checkout page: flat look. Square, shadowless, borderless cards (the Cards above
+   would otherwise get a 1px border) with form controls on the card background, so
+   they stay visible on the page's accent background. Overriding the source tokens
+   (not the --radius-ui / --shadow-ui bridge variables) keeps every primitive in
+   sync. :where() keeps specificity low so per-instance overrides still win. */
+:where([data-section="checkout"]) {
+    --ui-radius: 0px;
+    --ui-shadow: none;
+    --ui-border-width: 0px;
+}
+
+:where([data-section="checkout"]) :is(
+    input,
+    select,
+    textarea,
+    [data-slot="select-trigger"],
+    [role="checkbox"][data-state="unchecked"]
+) {
+    background-color: var(--color-card);
+}

@@ -66,6 +66,7 @@ import { isOrderTotalEstimated } from '@/components/order-summary/mobile-heading
 // @sfdc-extension-line SFDC_EXT_BOPIS
 import { filterDeliveryShippingMethods } from '@/extensions/bopis/lib/basket-utils';
 import ContactInfo from './components/contact-info';
+import ShippingSummary, { ShippingSummarySkeleton } from './components/shipping-summary';
 /** @feature-stub Express checkout buttons - remove this import and its JSX below to strip the stub */
 import ExpressPayments from './components/express-payments';
 import Payment from './components/payment';
@@ -1091,7 +1092,7 @@ export default function CheckoutFormPage({
     }
 
     return (
-        <div data-section="checkout" className="bg-background">
+        <div data-section="checkout" className="bg-accent">
             {shippingMethodsMapPromise && (
                 <Suspense fallback={null}>
                     <ShippingMethodsBridge
@@ -1104,17 +1105,14 @@ export default function CheckoutFormPage({
                 {statusMessage}
             </span>
             <UITarget targetId="sfcc.checkout.page.before" />
-            <div className="section-container pt-8 pb-6">
-                <Typography variant="h2" as="h1" className="mb-8">
-                    {t('pageTitle')}
-                </Typography>
+            <div className="section-container max-w-[1164px] pt-4 pb-6 lg:pt-6">
                 {showSessionExpiredBanner && (
                     <div className="mb-6">
                         <SessionExpiredBanner returnUrl={routes.checkout} />
                     </div>
                 )}
                 {/* Mobile Order Summary + My Cart */}
-                <div className="md:hidden mb-6 border border-border">
+                <div className="md:hidden mb-6 bg-card">
                     <Suspense fallback={<OrderSummarySkeleton />}>
                         {/* Pass lazy <OrderSummary /> as children to preserve checkout route code-splitting. */}
                         <OrderSummaryMobileAccordion
@@ -1148,10 +1146,11 @@ export default function CheckoutFormPage({
                 {/* Grid children are ordered in the DOM to match the desktop visual reading
                     order (main → sidebar → place order), so keyboard Tab flows the same way
                     the eye scans. Visual position on each breakpoint is applied via order-*. */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="space-y-6 md:order-2 lg:order-1 lg:col-span-2 [&_[data-slot=card-header].border-b]:pb-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr_auto] lg:gap-6">
+                    <div className="space-y-4 md:order-2 lg:order-1 lg:col-start-1 lg:row-span-2 [&_[data-slot=card-header].border-b]:border-b-0 [&_[data-slot=card-header].border-b]:pb-0">
                         <UITarget targetId="sfcc.checkout.mainContent.before" />
-                        {/* Express Payments - Apple Pay, Google Pay, Amazon Pay, PayPal & Venmo (mobile only) */}
+                        {/* Express Payments - Apple Pay, Google Pay, Amazon Pay, PayPal & Venmo.
+                            At the top so shoppers can skip the forms below. */}
                         <UITarget targetId="sfcc.checkout.expressPayments.header.before" />
                         <Suspense fallback={<ExpressPaymentsSkeleton />}>
                             <UITarget targetId="sfcc.checkout.expressPayments.before" />
@@ -1160,7 +1159,18 @@ export default function CheckoutFormPage({
                             </UITarget>
                             <UITarget targetId="sfcc.checkout.expressPayments.after" />
                         </Suspense>
-
+                        {/* Title + Shipping: items grouped by shipment with their arrival estimate */}
+                        {cart ? (
+                            <Suspense fallback={<ShippingSummarySkeleton />}>
+                                <ShippingSummary
+                                    basket={cart}
+                                    productMapPromise={productMapPromise}
+                                    onChangeShippingSpeed={() => goToStep(STEPS.SHIPPING_OPTIONS)}
+                                />
+                            </Suspense>
+                        ) : (
+                            <ShippingSummarySkeleton />
+                        )}
                         <UITarget targetId="sfcc.checkout.contactInfo.header.before" />
                         <Suspense fallback={<ContactInfoSkeleton />}>
                             <UITarget targetId="sfcc.checkout.contactInfo.before" />
@@ -1184,23 +1194,6 @@ export default function CheckoutFormPage({
                             <UITarget targetId="sfcc.checkout.contactInfo.after" />
                         </Suspense>
 
-                        {/* @sfdc-extension-block-start SFDC_EXT_BOPIS */}
-                        {/* Store Pickup Information */}
-                        {hasPickupItems && (
-                            <Suspense fallback={<PickupSkeleton />}>
-                                <CheckoutPickupWithData
-                                    cart={cart}
-                                    productMapPromise={productMapPromise}
-                                    isEditing={editingStep === CHECKOUT_STEPS.PICKUP}
-                                    onEdit={() => goToStep(CHECKOUT_STEPS.PICKUP)}
-                                    onContinue={onPickupContinueClick}
-                                    continueButtonLabel={pickupProceedButtonLabel}
-                                />
-                            </Suspense>
-                        )}
-
-                        {/* @sfdc-extension-block-end SFDC_EXT_BOPIS */}
-
                         {/* Shipping Address & Options */}
                         {showAddressAndOptions && (
                             <>
@@ -1223,6 +1216,23 @@ export default function CheckoutFormPage({
                                 </Suspense>
                             </>
                         )}
+
+                        {/* @sfdc-extension-block-start SFDC_EXT_BOPIS */}
+                        {/* Store Pickup Information */}
+                        {hasPickupItems && (
+                            <Suspense fallback={<PickupSkeleton />}>
+                                <CheckoutPickupWithData
+                                    cart={cart}
+                                    productMapPromise={productMapPromise}
+                                    isEditing={editingStep === CHECKOUT_STEPS.PICKUP}
+                                    onEdit={() => goToStep(CHECKOUT_STEPS.PICKUP)}
+                                    onContinue={onPickupContinueClick}
+                                    continueButtonLabel={pickupProceedButtonLabel}
+                                />
+                            </Suspense>
+                        )}
+
+                        {/* @sfdc-extension-block-end SFDC_EXT_BOPIS */}
 
                         <PaymentSubmissionRefProvider refValue={paymentSubmissionRef}>
                             <UITarget targetId="sfcc.checkout.payment.header.before" />
@@ -1274,17 +1284,17 @@ export default function CheckoutFormPage({
                     </div>
 
                     <div
-                        className="hidden md:block md:order-1 lg:order-2 lg:col-span-1"
+                        className="hidden md:block md:order-1 lg:order-2 lg:col-start-2 lg:row-start-1"
                         data-testid="checkout-order-summary-sidebar">
                         <UITarget targetId="sfcc.checkout.sidebar.before" />
                         <div className="space-y-6">
-                            {/* Order Summary + Cart Items */}
-                            <Card className="[--cart-divider-extend:1.5rem] gap-4 py-4 pb-0">
-                                <CardHeader className="border-b-[1px] border-border pb-2">
+                            {/* Review order: totals (the items are listed in the Shipping card) */}
+                            <Card className="[--cart-divider-extend:1.5rem] gap-4 py-6">
+                                <CardHeader>
                                     <CardTitle
                                         as="h2"
                                         className="text-2xl font-bold tracking-tight text-card-foreground">
-                                        {t('orderSummary.title')}
+                                        {t('reviewOrder.title')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -1299,26 +1309,12 @@ export default function CheckoutFormPage({
                                                 showPromoCodeForm={true}
                                                 productsByItemId={{}}
                                                 isEstimate={isEstimate}
-                                                className="border-none !py-0 [&_[data-slot=card-content]]:px-0 [--cart-summary-px:1.5rem]"
+                                                subtotalLabel={t('reviewOrder.yourItems')}
+                                                className="border-none !py-0 [&_[data-slot=card-content]]:px-0 [--cart-summary-px:1.5rem] [&_dl]:gap-x-0 [&_dl]:gap-y-3 [&_dl]:text-base [&_dl]:text-foreground [&_dt.font-bold]:mt-1 [&_dt.font-bold]:border-t [&_dt.font-bold]:pt-3 [&_dt.font-bold]:text-lg [&_dd.font-bold]:mt-1 [&_dd.font-bold]:border-t [&_dd.font-bold]:pt-3 [&_dd.font-bold]:text-lg [&_hr]:hidden"
                                             />
                                         </Suspense>
                                     </UITarget>
                                     <UITarget targetId="sfcc.checkout.orderSummary.after" />
-
-                                    <hr className="border-border -mx-6" />
-
-                                    <UITarget targetId="sfcc.checkout.myCart.before" />
-                                    <UITarget targetId="sfcc.checkout.myCart">
-                                        <Suspense
-                                            fallback={<MyCartSkeleton itemCount={cart?.productItems?.length || 2} />}>
-                                            <MyCartWithData
-                                                basket={cart}
-                                                productMapPromise={productMapPromise}
-                                                promotionsPromise={promotionsPromise}
-                                            />
-                                        </Suspense>
-                                    </UITarget>
-                                    <UITarget targetId="sfcc.checkout.myCart.after" />
                                 </CardContent>
                             </Card>
                         </div>
@@ -1326,7 +1322,7 @@ export default function CheckoutFormPage({
                     </div>
 
                     {showPlaceOrderSection && (
-                        <div className="flex flex-col items-end gap-4 w-full md:order-3 lg:order-3 lg:col-start-1 lg:col-span-2 lg:-mt-4">
+                        <div className="flex w-full flex-col gap-3 md:order-3 lg:order-3 lg:col-start-1 lg:row-start-3 lg:bg-card lg:p-6">
                             <UITarget targetId="sfcc.checkout.placeOrder.before" />
                             <UITarget targetId="sfcc.checkout.placeOrder">
                                 <form
@@ -1341,7 +1337,7 @@ export default function CheckoutFormPage({
                                             isSubmitting('payment') ||
                                             paymentFetcher.state === 'submitting'
                                         }
-                                        className="w-full shadow-2xs"
+                                        className="h-12 w-full text-base shadow-2xs"
                                         size="lg">
                                         <Lock className="size-4" />
                                         {isPlacingOrder || isPlaceOrderPending || isSubmitting('payment')
@@ -1356,6 +1352,7 @@ export default function CheckoutFormPage({
                                     </Button>
                                 </form>
                             </UITarget>
+                            <p className="hidden text-sm text-foreground lg:block">{t('reviewOrder.secureNote')}</p>
                             <UITarget targetId="sfcc.checkout.placeOrder.after" />
                         </div>
                     )}
