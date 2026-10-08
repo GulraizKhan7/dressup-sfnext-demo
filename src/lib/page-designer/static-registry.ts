@@ -22,16 +22,21 @@ const staticRegistryImporters = [
     () => import('../../components/content-card/index'),
     () => import('../../components/hero/index'),
     () => import('../../components/dynamic-image/index'),
+    () => import('../../components/personalised-message/index'),
     () => import('../../components/home/popular-category/index'),
     () => import('../../components/product-recommendations/index'),
     () => import('../../components/product-tile/index'),
+    () => import('../../components/text-block/index'),
+    () => import('../../components/brand-landing-page/index'),
     () => import('../../components/grid/index'),
     () => import('../../components/header/index'),
     () => import('../../components/hero-carousel/index'),
+    () => import('../../components/home-page-structure/index'),
     () => import('../../components/navigation-menu-mega/index'),
     () => import('../../components/home/popular-categories/index'),
     () => import('../../components/product-carousel/index'),
     () => import('../../components/product-merchandising-grid/index'),
+    () => import('../../components/seasonal-campaign-page/index'),
 ] as const;
 
 /**
@@ -40,29 +45,34 @@ const staticRegistryImporters = [
  *
  * DO NOT EDIT THIS FUNCTION MANUALLY - it will be overwritten on next build.
  *
- * Components registered: Content.announcementBanner, Content.contentCard, Content.hero, Content.pdImage, Content.popularCategory, Content.productRecommendations, Content.productTile, Layout.grid, Layout.header, Layout.heroCarousel, Layout.megaMenu, Layout.popularCategories, Layout.productCarousel, Layout.productMerchandisingGrid
+ * Components registered: Content.announcementBanner, Content.contentCard, Content.hero, Content.pdImage, Content.personalisedMessage, Content.popularCategory, Content.productRecommendations, Content.productTile, Content.textBlock, Layout.brandLandingPage, Layout.grid, Layout.header, Layout.heroCarousel, Layout.homePageStructure, Layout.megaMenu, Layout.popularCategories, Layout.productCarousel, Layout.productMerchandisingGrid, Layout.seasonalCampaignPage
  */
 export function initializeRegistry(targetRegistry = registry): void {
     targetRegistry.registerImporter('Content.announcementBanner', staticRegistryImporters[0], { fallback: 'fallback' });
     targetRegistry.registerImporter('Content.contentCard', staticRegistryImporters[1]);
     targetRegistry.registerImporter('Content.hero', staticRegistryImporters[2]);
     targetRegistry.registerImporter('Content.pdImage', staticRegistryImporters[3]);
-    targetRegistry.registerImporter('Content.popularCategory', staticRegistryImporters[4], { loader: 'loader' });
-    targetRegistry.registerImporter('Content.productRecommendations', staticRegistryImporters[5], { loader: 'loader' });
-    targetRegistry.registerImporter('Content.productTile', staticRegistryImporters[6], { loader: 'loader' });
-    targetRegistry.registerImporter('Layout.grid', staticRegistryImporters[7]);
-    targetRegistry.registerImporter('Layout.header', staticRegistryImporters[8]);
-    targetRegistry.registerImporter('Layout.heroCarousel', staticRegistryImporters[9], { fallback: 'fallback' });
-    targetRegistry.registerImporter('Layout.megaMenu', staticRegistryImporters[10]);
-    targetRegistry.registerImporter('Layout.popularCategories', staticRegistryImporters[11], { loader: 'loader' });
-    targetRegistry.registerImporter('Layout.productCarousel', staticRegistryImporters[12], {
+    targetRegistry.registerImporter('Content.personalisedMessage', staticRegistryImporters[4]);
+    targetRegistry.registerImporter('Content.popularCategory', staticRegistryImporters[5], { loader: 'loader' });
+    targetRegistry.registerImporter('Content.productRecommendations', staticRegistryImporters[6], { loader: 'loader' });
+    targetRegistry.registerImporter('Content.productTile', staticRegistryImporters[7], { loader: 'loader' });
+    targetRegistry.registerImporter('Content.textBlock', staticRegistryImporters[8]);
+    targetRegistry.registerImporter('Layout.brandLandingPage', staticRegistryImporters[9]);
+    targetRegistry.registerImporter('Layout.grid', staticRegistryImporters[10]);
+    targetRegistry.registerImporter('Layout.header', staticRegistryImporters[11]);
+    targetRegistry.registerImporter('Layout.heroCarousel', staticRegistryImporters[12], { fallback: 'fallback' });
+    targetRegistry.registerImporter('Layout.homePageStructure', staticRegistryImporters[13]);
+    targetRegistry.registerImporter('Layout.megaMenu', staticRegistryImporters[14]);
+    targetRegistry.registerImporter('Layout.popularCategories', staticRegistryImporters[15], { loader: 'loader' });
+    targetRegistry.registerImporter('Layout.productCarousel', staticRegistryImporters[16], {
         loader: 'loader',
         fallback: 'fallback',
     });
-    targetRegistry.registerImporter('Layout.productMerchandisingGrid', staticRegistryImporters[13], {
+    targetRegistry.registerImporter('Layout.productMerchandisingGrid', staticRegistryImporters[17], {
         loader: 'loader',
         fallback: 'fallback',
     });
+    targetRegistry.registerImporter('Layout.seasonalCampaignPage', staticRegistryImporters[18]);
 }
 
 // STATIC_REGISTRY_END

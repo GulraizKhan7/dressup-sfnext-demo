@@ -1,0 +1,30 @@
+{
+    "name": "Text Block",
+    "description": "A configurable heading and text content block",
+    "group": "Content",
+    "arch_type": "headless",
+    "region_definitions": [],
+    "attribute_definition_groups": [
+        {
+            "id": "textBlock",
+            "name": "Text Block",
+            "description": "A configurable heading and text content block",
+            "attribute_definitions": [
+                {
+                    "id": "heading",
+                    "name": "Heading",
+                    "type": "string",
+                    "required": false,
+                    "description": "Field: heading"
+                },
+                {
+                    "id": "content",
+                    "name": "Content",
+                    "type": "text",
+                    "required": false,
+                    "description": "Plain text content. Line breaks are preserved."
+                }
+            ]
+        }
+    ]
+}

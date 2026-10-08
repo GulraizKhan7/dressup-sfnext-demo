@@ -29,44 +29,8 @@
         <searchable-flag>false</searchable-flag>
         <searchable-flag site-id="SITEID">false</searchable-flag>
         <page-attributes />
-        <content-links>
-            <content-link content-id="c648bffe3976756a770520d54b" type="page.homePage.headerbanner">
-                <position>1.0</position>
-            </content-link>
-            <content-link content-id="988da893ff20206963adeb486f" type="page.homePage.main">
-                <position>1.0</position>
-            </content-link>
-        </content-links>
+        <content-links />
         <sitemap-included-flag site-id="SITEID">false</sitemap-included-flag>
-    </content>
-
-    <content content-id="c648bffe3976756a770520d54b">
-        <type>component.Layout.heroCarousel</type>
-        <config>{
-            "visibility" : [ ]
-            }</config>
-        <data xml:lang="x-default">{
-            "showDots" : true,
-            "showNavigation" : false,
-            "autoPlayInterval" : 5000,
-            "autoPlay" : false
-            }</data>
-        <online-flag>true</online-flag>
-        <online-flag site-id="SITEID">true</online-flag>
-        <page-attributes/>
-    </content>
-
-    <content content-id="988da893ff20206963adeb486f">
-        <type>component.Layout.productCarousel</type>
-        <config>{
-            "visibility" : [ ]
-            }</config>
-        <data xml:lang="x-default">{
-            "title" : "Featured Products"
-            }</data>
-        <online-flag>true</online-flag>
-        <online-flag site-id="SITEID">true</online-flag>
-        <page-attributes/>
     </content>
 
     <content content-id="pdp">

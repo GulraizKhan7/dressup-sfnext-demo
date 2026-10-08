@@ -132,11 +132,20 @@ import { type Maintenance, maintenanceContext } from '@/lib/maintenance';
 import Logo from '@/components/logo';
 import { SkipLink } from '@/components/skip-link';
 export const links: Route.LinksFunction = () => {
+    const stylesheetLink = createStorefrontStylesheetLink(appStylesHref);
+    // Suppress hydration warning for nonce - browsers strip it after CSP application
+    // This is expected behavior and doesn't affect functionality
+    if (typeof stylesheetLink === 'object' && stylesheetLink !== null && 'props' in stylesheetLink) {
+        (stylesheetLink as any).props = {
+            ...(stylesheetLink as any).props,
+            suppressHydrationWarning: true,
+        };
+    }
     return [
         // Preload critical fonts
         { rel: 'preload', href: primaryFont, as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' },
         { rel: 'preload', href: appStylesHref, as: 'style' },
-        createStorefrontStylesheetLink(appStylesHref),
+        stylesheetLink,
     ];
 };
 

@@ -13,16 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Suspense } from 'react';
-import { Await, redirect, useAsyncError } from 'react-router';
+import { redirect } from 'react-router';
 import type { Route } from './+types/_app._index';
-import type { ShopperProducts, ShopperSearch } from '@/scapi';
-import { fetchCarouselProducts } from '@/components/product-carousel/loaders';
-import { fetchCategories } from '@/lib/api/categories.server';
-import { siteContext, resolvePrefix, type SiteContext } from '@salesforce/storefront-next-runtime/site-context';
+import { resolvePrefix } from '@salesforce/storefront-next-runtime/site-context';
 import { Region } from '@/components/region';
-import PopularCategories from '@/components/home/popular-categories';
-import ContentCard from '@/components/content-card';
 import { getConfig } from '@salesforce/storefront-next-runtime/config';
 import { PageType } from '@/lib/decorators/page-type';
 import { RegionDefinition } from '@/lib/decorators/region-definition';
@@ -31,60 +25,39 @@ import { fetchPageWithComponentData } from '@/lib/page-designer/page-loader.serv
 import { getLogger } from '@/lib/logger.server';
 
 import hero01 from '/images/hero-01.webp';
-import hero02 from '/images/hero-02.webp';
-import hero03 from '/images/hero-03.webp';
-import hero04 from '/images/hero-04.webp';
-import HeroCarousel, { type HeroSlide } from '@/components/hero-carousel';
-import { ProductCarouselSkeleton } from '@/components/product-carousel';
-import { ProductCarouselWithData } from '@/components/product-carousel/carousel';
 import { SeoMeta } from '@/components/seo-meta';
 import { buildCanonicalUrl } from '@/utils/canonical-url';
 import { useTranslation } from 'react-i18next';
-import type { NormalizedApiError } from '@/lib/api/normalized-api-error';
+
+type HeadersArgs = Pick<Route.HeadersArgs, 'headers'>;
 
 export { shouldRevalidate } from '@/lib/revalidation/routes/home';
 
 @PageType({
     name: 'Home Page',
-    description: 'Main landing page with hero carousel, featured products, and help sections',
+    description: 'Main landing page composed with the Home Page Structure component',
     supportedAspectTypes: [],
 })
 @RegionDefinition([
     {
         id: 'headerbanner',
-        name: 'Header Banner Region',
-        description: 'Region for promotional banners and hero content',
-        maxComponents: 3,
+        name: 'Header Banner',
+        description: 'Add the above-the-fold hero carousel or hero banner',
+        maxComponents: 1,
+        componentTypeInclusions: ['Layout.heroCarousel', 'Content.hero'],
     },
     {
         id: 'main',
-        name: 'Main Content Region',
-        description: 'Region for main content',
-        maxComponents: 10,
+        name: 'Home Page Structure',
+        description: 'Add the Home Page Structure component to configure homepage sections in Page Designer',
+        maxComponents: 1,
+        componentTypeInclusions: ['Layout.homePageStructure'],
     },
 ])
 export class HomePageMetadata {}
 
-function FeaturedProductsError() {
-    const error = useAsyncError() as NormalizedApiError;
-    const { t } = useTranslation('home');
-    return (
-        <div role="alert" className="py-8 text-center text-muted-foreground">
-            <p>{t('featuredProducts.loadFailed')}</p>
-            {import.meta.env.DEV && (
-                <div className="mt-2 text-xs font-mono text-muted-foreground/70">
-                    {error.status && <span>{error.status}</span>}
-                    {error.message && <p>{error.message}</p>}
-                </div>
-            )}
-        </div>
-    );
-}
-
 export type HomePageData = {
     page: Awaited<ReturnType<typeof fetchPageWithComponentData>>;
-    searchResult: Promise<ShopperSearch.schemas['ProductSearchResult']>;
-    categories: Promise<ShopperProducts.schemas['Category'][]>;
     pageUrl: string;
     ogImageUrl: string;
 };
@@ -92,7 +65,7 @@ export type HomePageData = {
 /**
  * Server-side loader function that fetches home page data.
  * This function runs on the server during SSR and prepares data for the home page.
- * @returns Promise that resolves to an object containing search result promise
+ * @returns Page Designer page data and canonical metadata for the homepage
  */
 export async function loader(args: Route.LoaderArgs): Promise<HomePageData> {
     const logger = getLogger(args.context);
@@ -114,26 +87,30 @@ export async function loader(args: Route.LoaderArgs): Promise<HomePageData> {
         throw redirect(`${prefixedPath}/`);
     }
 
-    const currency = (args.context.get(siteContext) as SiteContext).currency;
     const pageUrl = buildCanonicalUrl(requestUrl.origin, requestUrl.pathname, requestUrl.search);
-    const page = fetchPageWithComponentData(args, { pageId: 'homepage' });
-    const searchResult = fetchCarouselProducts(args.context, {
-        categoryId: 'root',
-        limit: config.pages.home.featuredProductsCount,
-        currency: currency ?? undefined,
-    });
-    const categories = fetchCategories(args.context, 'root', 1);
+    const page = await fetchPageWithComponentData(args, { pageId: 'homepage' });
 
-    // These promises are returned to React Router on success. If the critical page request fails
-    // first, observe their eventual outcome so a later API failure cannot become unhandled.
-    void Promise.allSettled([searchResult, categories]);
+    logger.debug('HomePage: page data fetched', { 
+        pageId: page?.id, 
+        pageName: page?.name, 
+        regionCount: page?.regions?.length,
+        regions: page?.regions?.map(r => ({ id: r.id, componentCount: r.components?.length }))
+    });
 
     return {
-        page: await page,
-        searchResult,
-        categories,
+        page,
         pageUrl,
         ogImageUrl: new URL(hero01, requestUrl.origin).href,
+    };
+}
+
+export function headers(): HeadersArgs {
+    return {
+        headers: {
+            // Disable caching for home page to ensure Page Designer changes appear immediately
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            Pragma: 'no-cache',
+        },
     };
 }
 
@@ -145,56 +122,11 @@ export async function loader(args: Route.LoaderArgs): Promise<HomePageData> {
 export default function HomePage({ loaderData }: { loaderData: HomePageData }) {
     const { t } = useTranslation('home');
 
-    const heroSlides: HeroSlide[] = [
-        {
-            id: 'slide-1',
-            title: t('hero.slide1.title'),
-            subtitle: t('hero.slide1.subtitle'),
-            imageUrl: hero01,
-            imageAlt: t('hero.slide1.imageAlt'),
-            ctaText: t('hero.slide1.ctaText'),
-            ctaAriaLabel: t('hero.slide1.ctaAriaLabel'),
-            ctaLink: '/category/root',
-            overlayPosition: 'Middle Center',
-            overlayAlignment: 'center',
-        },
-        {
-            id: 'slide-2',
-            title: t('hero.slide2.title'),
-            subtitle: t('hero.slide2.subtitle'),
-            imageUrl: hero02,
-            imageAlt: t('hero.slide2.imageAlt'),
-            ctaText: t('hero.slide2.ctaText'),
-            ctaAriaLabel: t('hero.slide2.ctaAriaLabel'),
-            ctaLink: '/category/root',
-            overlayPosition: 'Middle Center',
-            overlayAlignment: 'center',
-        },
-        {
-            id: 'slide-3',
-            title: t('hero.slide3.title'),
-            subtitle: t('hero.slide3.subtitle'),
-            imageUrl: hero03,
-            imageAlt: t('hero.slide3.imageAlt'),
-            ctaText: t('hero.slide3.ctaText'),
-            ctaAriaLabel: t('hero.slide3.ctaAriaLabel'),
-            ctaLink: '/category/root',
-            overlayPosition: 'Middle Center',
-            overlayAlignment: 'center',
-        },
-        {
-            id: 'slide-4',
-            title: t('hero.slide4.title'),
-            subtitle: t('hero.slide4.subtitle'),
-            imageUrl: hero04,
-            imageAlt: t('hero.slide4.imageAlt'),
-            ctaText: t('hero.slide4.ctaText'),
-            ctaAriaLabel: t('hero.slide4.ctaAriaLabel'),
-            ctaLink: '/category/root',
-            overlayPosition: 'Middle Center',
-            overlayAlignment: 'center',
-        },
-    ];
+    // Debug logging to check page data
+    console.log('HomePage: loaderData.page', loaderData.page);
+    console.log('HomePage: page regions', loaderData.page?.regions);
+    console.log('HomePage: page is null?', loaderData.page === null);
+    console.log('HomePage: page is undefined?', loaderData.page === undefined);
 
     return (
         <>
@@ -212,97 +144,8 @@ export default function HomePage({ loaderData }: { loaderData: HomePageData }) {
                         image: loaderData.ogImageUrl,
                     }}
                 />
-                {/* Header Banner Region - critical content suspends at the page boundary */}
-                <div>
-                    <Region
-                        page={loaderData.page}
-                        regionId="headerbanner"
-                        critical={true}
-                        errorElement={
-                            <>
-                                <HeroCarousel
-                                    slides={heroSlides}
-                                    autoPlay={true}
-                                    autoPlayInterval={6000}
-                                    showNavigation={true}
-                                    showDots={true}
-                                />
-
-                                {/* Featured Products */}
-                                <Suspense fallback={<ProductCarouselSkeleton title={t('featuredProducts.title')} />}>
-                                    <Await resolve={loaderData.searchResult} errorElement={<FeaturedProductsError />}>
-                                        {(searchResult) => (
-                                            <ProductCarouselWithData
-                                                data={searchResult}
-                                                title={t('featuredProducts.title')}
-                                                shopAllUrl="/category/root"
-                                                shopAllText={t('featuredProducts.shopAll')}
-                                            />
-                                        )}
-                                    </Await>
-                                </Suspense>
-                            </>
-                        }
-                    />
-                </div>
-
-                {/* Main Region - Region component handles its own Suspense internally */}
-                {/* Note: This region doesn't provide fallback skeletons right now as it's located below the fold */}
-                <Region
-                    page={loaderData.page}
-                    regionId="main"
-                    errorElement={
-                        <>
-                            {/* Popular Categories - full-width section with its own gray bg and container */}
-                            <PopularCategories categoriesPromise={loaderData.categories} />
-
-                            {/* Featured Content Cards - Static content */}
-                            <div className="pt-16">
-                                <div className="section-container">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <ContentCard
-                                            title={t('featuredContent.women.title')}
-                                            description={t('featuredContent.women.description')}
-                                            imageUrl={hero03}
-                                            imageAlt={t('featuredContent.women.imageAlt')}
-                                            buttonText={t('featuredContent.women.ctaText')}
-                                            buttonAriaLabel={t('featuredContent.women.ctaAriaLabel')}
-                                            buttonLink="/category/womens"
-                                            showBackground={false}
-                                            showBorder={false}
-                                            loading="lazy"
-                                        />
-                                        <ContentCard
-                                            title={t('featuredContent.men.title')}
-                                            description={t('featuredContent.men.description')}
-                                            imageUrl={hero04}
-                                            imageAlt={t('featuredContent.men.imageAlt')}
-                                            buttonText={t('featuredContent.men.ctaText')}
-                                            buttonAriaLabel={t('featuredContent.men.ctaAriaLabel')}
-                                            buttonLink="/category/mens"
-                                            showBackground={false}
-                                            showBorder={false}
-                                            loading="lazy"
-                                        />
-                                    </div>
-
-                                    {/* Text-only card below women/men cards */}
-                                    <div className="mt-16 max-w-4xl mx-auto layout-gutter text-center">
-                                        <ContentCard
-                                            title={t('featuredContent.styleForRealLife.title')}
-                                            description={t('featuredContent.styleForRealLife.description')}
-                                            showBackground={false}
-                                            showBorder={false}
-                                            cardFooterClassName="items-center text-center p-0"
-                                            cardDescriptionClassName="text-center"
-                                            className="[&_h3]:text-3xl [&_h3]:md:text-4xl [&_h3]:font-normal [&_h3]:text-brand-black [&_h3]:mb-6 [&_h3]:tracking-tight [&_p]:text-sm [&_p]:text-brand-gray-700 [&_p]:leading-relaxed [&_p]:font-normal [&_p:last-of-type]:text-base [&_p:last-of-type]:text-brand-gray-600"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    }
-                />
+                <Region page={loaderData.page} regionId="headerbanner" critical={true} />
+                <Region page={loaderData.page} regionId="main" />
             </div>
         </>
     );

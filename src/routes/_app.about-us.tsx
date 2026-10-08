@@ -25,7 +25,6 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import ContentCard from '@/components/content-card';
-import Contact from '@/components/contact';
 import { Typography } from '@/components/typography';
 import { SeoMeta } from '@/components/seo-meta';
 import { buildCanonicalUrl } from '@/utils/canonical-url';
@@ -40,20 +39,20 @@ import { fetchPageWithComponentData, type PageWithComponentData } from '@/lib/pa
 
 @PageType({
     name: 'About Us Page',
-    description: 'About Us page containing company information and a contact form.',
+    description: 'About Us page containing company information.',
     supportedAspectTypes: [],
 })
 @RegionDefinition([
     {
         id: 'headline',
         name: 'Headline Region',
-        description: 'Main content area displayed above the contact form',
+        description: 'Main content area displayed above the additional information region',
         maxComponents: 10,
     },
     {
         id: 'additionalinformation',
         name: 'Additional Information Region',
-        description: 'Secondary content area displayed below the contact form',
+        description: 'Secondary content area displayed below the headline region',
         maxComponents: 10,
     },
 ])
@@ -72,7 +71,7 @@ export async function loader(args: Route.LoaderArgs): Promise<AboutUsPageData> {
     const requestUrl = new URL(args.request.url);
     return {
         page: await fetchPageWithComponentData(args, {
-            pageId: 'aboutus',
+            pageId: 'about-us',
         }),
         pageUrl: buildCanonicalUrl(requestUrl.origin, requestUrl.pathname, requestUrl.search),
         ogImageUrl: new URL(visionImage, requestUrl.origin).href,
@@ -188,7 +187,6 @@ function PostContactRegionContent({ page, t }: { page: PageWithComponentData | n
  * This component renders:
  * - Breadcrumb navigation
  * - Headline Region (Page Designer with fallback to static content)
- * - Contact form (always visible)
  * - Additional Information Region (Page Designer with fallback to static content)
  *
  * Header and Footer are automatically included from the root layout.
@@ -229,13 +227,6 @@ export default function AboutUs({ loaderData }: { loaderData: AboutUsPageData })
             {/* Headline Region - Page Designer configurable region with static fallback */}
             <div className="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
                 <PreContactRegionContent page={loaderData.page} t={t} />
-            </div>
-
-            {/* Contact Section - Always visible */}
-            <div className="md:px-8 px-4 py-12 bg-secondary">
-                <div className="max-w-screen-2xl mx-auto">
-                    <Contact />
-                </div>
             </div>
 
             {/* Additional Information Region - Page Designer configurable region with static fallback */}

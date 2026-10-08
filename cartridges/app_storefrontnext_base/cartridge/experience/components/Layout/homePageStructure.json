@@ -1,0 +1,61 @@
+{
+    "name": "Home Page Structure",
+    "description": "Fixed homepage section layout with content configured through Page Designer regions",
+    "group": "Layout",
+    "arch_type": "headless",
+    "region_definitions": [
+        {
+            "id": "featuredProducts",
+            "name": "Featured Products",
+            "description": "Add a product carousel or merchandising grid",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Layout.productCarousel"
+                },
+                {
+                    "type_id": "Layout.productMerchandisingGrid"
+                },
+                {
+                    "type_id": "Content.productRecommendations"
+                }
+            ],
+            "max_components": 1
+        },
+        {
+            "id": "popularCategories",
+            "name": "Popular Categories",
+            "description": "Add a configurable category carousel",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Layout.popularCategories"
+                }
+            ],
+            "max_components": 1
+        },
+        {
+            "id": "featuredContent",
+            "name": "Featured Content",
+            "description": "Add content cards, text blocks, or a grid of editorial content",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.contentCard"
+                },
+                {
+                    "type_id": "Content.textBlock"
+                },
+                {
+                    "type_id": "Layout.grid"
+                }
+            ],
+            "max_components": 10
+        }
+    ],
+    "attribute_definition_groups": [
+        {
+            "id": "homePageStructure",
+            "name": "Home Page Structure",
+            "description": "Fixed homepage section layout with content configured through Page Designer regions",
+            "attribute_definitions": []
+        }
+    ]
+}

@@ -1,18 +1,18 @@
 {
     "name": "About Us Page",
-    "description": "About Us page containing company information and a contact form.",
+    "description": "About Us page containing company information.",
     "arch_type": "headless",
     "region_definitions": [
         {
             "id": "headline",
             "name": "Headline Region",
-            "description": "Main content area displayed above the contact form",
+            "description": "Main content area displayed above the additional information region",
             "max_components": 10
         },
         {
             "id": "additionalinformation",
             "name": "Additional Information Region",
-            "description": "Secondary content area displayed below the contact form",
+            "description": "Secondary content area displayed below the headline region",
             "max_components": 10
         }
     ],

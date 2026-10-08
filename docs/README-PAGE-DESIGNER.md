@@ -1126,25 +1126,44 @@ export default function ProductPage({ loaderData }) {
 ```tsx
 @PageType({
     name: 'Home Page',
-    description: 'Main landing page with hero carousel, featured products, and help sections',
+    description: 'Main landing page composed with the Home Page Structure component',
     supportedAspectTypes: [],
 })
 @RegionDefinition([
     {
         id: 'headerbanner',
-        name: 'Header Banner Region',
-        description: 'Region for promotional banners and hero content',
-        maxComponents: 3,
+        name: 'Header Banner',
+        description: 'Above-the-fold hero content',
+        maxComponents: 1,
+        componentTypeInclusions: ['Layout.heroCarousel', 'Content.hero'],
     },
     {
         id: 'main',
-        name: 'Main Content Region',
-        description: 'Region for main content',
-        maxComponents: 5,
+        name: 'Home Page Structure',
+        description: 'Add the Home Page Structure component to configure homepage sections',
+        maxComponents: 1,
+        componentTypeInclusions: ['Layout.homePageStructure'],
     },
 ])
 export class HomePageMetadata {}
 ```
+
+Configure the `headerbanner` region of the `homepage` page with a Hero Carousel or Hero component,
+then add one `Layout.homePageStructure` component to `main` in Business Manager. The structure
+provides ordered `featuredProducts`, `popularCategories`, and `featuredContent` regions. Merchants
+configure them with Page Designer components such as Product Carousel, Categories Carousel, Content
+Card, Text Block, and Grid. The route does not supply hardcoded storefront-section fallbacks; only
+the above-the-fold hero region is critical so lower homepage sections retain local loading
+boundaries.
+
+The starter site library import keeps the `homepage` page asset but leaves its component links empty,
+so a fresh import does not add sample Hero Carousel or Product Carousel content. If an existing
+Business Manager library still displays those sample sections, import the updated
+`cartridges/app_storefrontnext_base/staticfiles/cartridge/impex/default/sites/SITEID/library/library.xml`
+through **Administration → Site Development → Site Import & Export** (replace `SITEID` as required
+by your project), then verify the `homepage` page's `headerbanner` and `main` regions in Page
+Designer. Publishing the empty page removes its storefront sections; adding and publishing the
+configured Page Designer components displays them again.
 
 #### Category Page Example
 

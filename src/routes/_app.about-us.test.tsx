@@ -161,10 +161,7 @@ vi.mock('@/lib/logger.server', () => ({
 
 const renderComponent = (loaderDataOverrides?: Partial<AboutUsPageData>) => {
     const defaultData: AboutUsPageData = {
-        page: {
-            ...createMockPage([]),
-            componentData: {},
-        },
+        page: null,
         pageUrl: 'http://localhost/about-us',
         ogImageUrl: 'http://localhost/__ASSET_MOCK__',
     };
@@ -208,11 +205,10 @@ describe('AboutUs', () => {
             });
         });
 
-        test('renders Contact component - always visible', async () => {
+        test('does not render the built-in Contact component when no Page Designer page is loaded', async () => {
             renderComponent();
             await waitFor(() => {
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
-                expect(screen.getByText('Contact Form')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
             });
         });
 
@@ -249,8 +245,7 @@ describe('AboutUs', () => {
             });
 
             await waitFor(() => {
-                // Contact should still render
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
                 // Static fallback content should render
                 expect(screen.getByText(t('aboutUs:section.ourGoal.title'))).toBeInTheDocument();
                 expect(screen.getByText(t('aboutUs:section.ourMission.title'))).toBeInTheDocument();
@@ -276,8 +271,7 @@ describe('AboutUs', () => {
             });
 
             await waitFor(() => {
-                // Contact should still render
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
                 // Page Designer region should render
                 expect(screen.getByTestId('region-headline')).toBeInTheDocument();
                 expect(screen.getByText('Page Designer Region: headline')).toBeInTheDocument();
@@ -302,8 +296,7 @@ describe('AboutUs', () => {
             });
 
             await waitFor(() => {
-                // Contact should still render
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
                 // Static fallback content should render
                 expect(screen.getByText(t('aboutUs:section.ourGoal.title'))).toBeInTheDocument();
                 // Page Designer region should NOT render
@@ -330,8 +323,7 @@ describe('AboutUs', () => {
             });
 
             await waitFor(() => {
-                // Contact should still render
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
                 // Page Designer region should render
                 expect(screen.getByTestId('region-additionalinformation')).toBeInTheDocument();
                 expect(screen.getByText('Page Designer Region: additionalinformation')).toBeInTheDocument();
@@ -356,8 +348,7 @@ describe('AboutUs', () => {
             });
 
             await waitFor(() => {
-                // Contact should still render
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
                 // Static fallback content should render
                 expect(screen.getByText(t('aboutUs:section.ourMission.title'))).toBeInTheDocument();
                 // Page Designer region should NOT render
@@ -385,8 +376,7 @@ describe('AboutUs', () => {
             });
 
             await waitFor(() => {
-                // Contact should always render
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
                 // Both Page Designer regions should render
                 expect(screen.getByTestId('region-headline')).toBeInTheDocument();
                 expect(screen.getByTestId('region-additionalinformation')).toBeInTheDocument();
@@ -404,9 +394,9 @@ describe('AboutUs', () => {
             });
 
             await waitFor(() => {
-                // Should still render static content and contact
+                // Should still render static content without the built-in contact form.
                 expect(screen.getByText(t('aboutUs:section.ourGoal.title'))).toBeInTheDocument();
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
             });
         });
     });
@@ -436,12 +426,10 @@ describe('AboutUs', () => {
             });
         });
 
-        test('applies correct background styling to Contact section', async () => {
+        test('does not render the built-in Contact section', async () => {
             renderComponent();
             await waitFor(() => {
-                const contact = screen.getByTestId('contact');
-                const contactSection = contact.closest('[class*="bg-secondary"]');
-                expect(contactSection).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
             });
         });
     });
@@ -474,7 +462,7 @@ describe('AboutUs', () => {
 
                 // Assert - API calls
                 expect(vi.mocked(fetchPageWithComponentData)).toHaveBeenCalledWith(baseLoaderArgs, {
-                    pageId: 'aboutus',
+                    pageId: 'about-us',
                 });
 
                 // Assert - Return value contains all expected properties
@@ -528,7 +516,7 @@ describe('AboutUs', () => {
                 const result = await loader(baseLoaderArgs);
 
                 expect(vi.mocked(fetchPageWithComponentData)).toHaveBeenCalledWith(baseLoaderArgs, {
-                    pageId: 'aboutus',
+                    pageId: 'about-us',
                 });
                 expect(result.page).toBe(mockPageWithData);
             });
@@ -549,9 +537,8 @@ describe('AboutUs', () => {
         });
     });
 
-    describe('Contact Section Position', () => {
-        test('Contact section is rendered with empty regions', async () => {
-            // Test with empty regions
+    describe('Built-in Contact Section', () => {
+        test('Contact section is hidden when a Page Designer page has empty regions', async () => {
             renderComponent({
                 page: {
                     ...createMockPage([]),
@@ -559,12 +546,11 @@ describe('AboutUs', () => {
                 },
             });
             await waitFor(() => {
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
             });
         });
 
-        test('Contact section is rendered with regions provided', async () => {
-            // Test with regions
+        test('Contact section is hidden when Page Designer regions are provided', async () => {
             const page = {
                 ...createMockPage([
                     { id: 'headline', components: [] },
@@ -575,28 +561,22 @@ describe('AboutUs', () => {
 
             renderComponent({ page });
             await waitFor(() => {
-                expect(screen.getByTestId('contact')).toBeInTheDocument();
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
             });
         });
 
-        test('Contact section maintains correct positioning between regions', async () => {
+        test('Contact section stays hidden while static fallback regions render', async () => {
             renderComponent();
 
             await waitFor(() => {
-                const contact = screen.getByTestId('contact');
                 const goalSection = screen.getByText(t('aboutUs:section.ourGoal.title'));
                 const missionSection = screen.getByText(t('aboutUs:section.ourMission.title'));
                 const ourGoalText = screen.getByText('Built for movement. Designed for everyday life.');
                 const whatWeStandForText = screen.getByText('What We Stand For');
 
-                // Contact should be in the document
-                expect(contact).toBeInTheDocument();
-
-                // Goal section (before precontact region) should be before Contact
+                expect(screen.queryByTestId('contact')).not.toBeInTheDocument();
                 expect(goalSection).toBeInTheDocument();
                 expect(ourGoalText).toBeInTheDocument();
-
-                // Mission section (in postcontact static content) should be after Contact
                 expect(missionSection).toBeInTheDocument();
                 expect(whatWeStandForText).toBeInTheDocument();
             });

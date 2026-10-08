@@ -1,19 +1,32 @@
 {
     "name": "Home Page",
-    "description": "Main landing page with hero carousel, featured products, and help sections",
+    "description": "Main landing page composed with the Home Page Structure component",
     "arch_type": "headless",
     "region_definitions": [
         {
             "id": "headerbanner",
-            "name": "Header Banner Region",
-            "description": "Region for promotional banners and hero content",
-            "max_components": 3
+            "name": "Header Banner",
+            "description": "Add the above-the-fold hero carousel or hero banner",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Layout.heroCarousel"
+                },
+                {
+                    "type_id": "Content.hero"
+                }
+            ],
+            "max_components": 1
         },
         {
             "id": "main",
-            "name": "Main Content Region",
-            "description": "Region for main content",
-            "max_components": 10
+            "name": "Home Page Structure",
+            "description": "Add the Home Page Structure component to configure homepage sections in Page Designer",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Layout.homePageStructure"
+                }
+            ],
+            "max_components": 1
         }
     ],
     "supported_aspect_types": [],
