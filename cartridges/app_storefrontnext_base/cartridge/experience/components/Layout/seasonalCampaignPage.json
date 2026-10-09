@@ -1,0 +1,83 @@
+{
+    "name": "Seasonal Campaign Page",
+    "description": "Seasonal promotional page with campaign hero, messaging, product highlights, and call-to-action sections",
+    "group": "Layout",
+    "arch_type": "headless",
+    "region_definitions": [
+        {
+            "id": "campaignHero",
+            "name": "Campaign Hero",
+            "description": "Main campaign banner with promotional messaging",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.hero"
+                }
+            ],
+            "max_components": 1
+        },
+        {
+            "id": "campaignMessage",
+            "name": "Campaign Message",
+            "description": "Key campaign messaging and announcements",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.personalisedMessage"
+                },
+                {
+                    "type_id": "Content.textBlock"
+                }
+            ],
+            "max_components": 2
+        },
+        {
+            "id": "campaignHighlights",
+            "name": "Campaign Highlights",
+            "description": "Featured campaign content (Image + Text cards)",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.contentCard"
+                }
+            ],
+            "max_components": 4
+        },
+        {
+            "id": "campaignProducts",
+            "name": "Campaign Products",
+            "description": "Products featured in the campaign",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Layout.productMerchandisingGrid"
+                },
+                {
+                    "type_id": "Layout.productCarousel"
+                },
+                {
+                    "type_id": "Content.productRecommendations"
+                }
+            ],
+            "max_components": 1
+        },
+        {
+            "id": "campaignCTA",
+            "name": "Call-to-Action",
+            "description": "Final call-to-action section",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.contentCard"
+                },
+                {
+                    "type_id": "Content.textBlock"
+                }
+            ],
+            "max_components": 1
+        }
+    ],
+    "attribute_definition_groups": [
+        {
+            "id": "seasonalCampaignPage",
+            "name": "Seasonal Campaign Page",
+            "description": "Seasonal promotional page with campaign hero, messaging, product highlights, and call-to-action sections",
+            "attribute_definitions": []
+        }
+    ]
+}

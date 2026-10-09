@@ -1,0 +1,79 @@
+{
+    "name": "Brand Landing Page",
+    "description": "Brand-specific landing page with hero, brand story, featured products, and personalized messaging",
+    "arch_type": "headless",
+    "region_definitions": [
+        {
+            "id": "hero",
+            "name": "Hero Section",
+            "description": "Main hero banner for brand introduction",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.hero"
+                }
+            ],
+            "max_components": 1
+        },
+        {
+            "id": "brandStory",
+            "name": "Brand Story",
+            "description": "Brand narrative and messaging (Image + Text, Text Block)",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.contentCard"
+                },
+                {
+                    "type_id": "Content.textBlock"
+                }
+            ],
+            "max_components": 3
+        },
+        {
+            "id": "personalizedMessage",
+            "name": "Personalized Message",
+            "description": "Targeted message based on customer segment",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.personalisedMessage"
+                }
+            ],
+            "max_components": 1
+        },
+        {
+            "id": "featuredProducts",
+            "name": "Featured Products",
+            "description": "Product grid showcasing brand products",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Layout.productMerchandisingGrid"
+                },
+                {
+                    "type_id": "Layout.productCarousel"
+                },
+                {
+                    "type_id": "Content.productRecommendations"
+                }
+            ],
+            "max_components": 1
+        },
+        {
+            "id": "additionalContent",
+            "name": "Additional Content",
+            "description": "Optional additional content sections",
+            "component_type_inclusions": [
+                {
+                    "type_id": "Content.contentCard"
+                },
+                {
+                    "type_id": "Content.textBlock"
+                },
+                {
+                    "type_id": "Layout.grid"
+                }
+            ],
+            "max_components": 5
+        }
+    ],
+    "supported_aspect_types": [],
+    "route": "/:siteId/:localeId/brand-landing"
+}

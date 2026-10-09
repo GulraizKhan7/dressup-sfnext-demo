@@ -1,0 +1,64 @@
+{
+    "name": "Personalised Message",
+    "description": "Display targeted messages based on customer type, location, or other personalization criteria",
+    "group": "Content",
+    "arch_type": "headless",
+    "region_definitions": [],
+    "attribute_definition_groups": [
+        {
+            "id": "personalisedMessage",
+            "name": "Personalised Message",
+            "description": "Display targeted messages based on customer type, location, or other personalization criteria",
+            "attribute_definitions": [
+                {
+                    "id": "message",
+                    "name": "Message",
+                    "type": "text",
+                    "required": false,
+                    "description": "The message text to display"
+                },
+                {
+                    "id": "personalizationTarget",
+                    "name": "Target Audience",
+                    "type": "enum",
+                    "required": false,
+                    "description": "Who should see this message",
+                    "values": [
+                        "All Customers",
+                        "New Customers",
+                        "Returning Customers",
+                        "VIP Customers",
+                        "Logged In",
+                        "Guest"
+                    ],
+                    "default_value": "All Customers"
+                },
+                {
+                    "id": "messageStyle",
+                    "name": "Message Style",
+                    "type": "enum",
+                    "required": false,
+                    "description": "Visual style of the message",
+                    "values": ["Default", "Prominent", "Subtle", "Alert"],
+                    "default_value": "Default"
+                },
+                {
+                    "id": "showIcon",
+                    "name": "Show Icon",
+                    "type": "boolean",
+                    "required": false,
+                    "description": "Display an icon alongside the message",
+                    "default_value": true
+                },
+                {
+                    "id": "dismissible",
+                    "name": "Dismissible",
+                    "type": "boolean",
+                    "required": false,
+                    "description": "Allow users to dismiss the message",
+                    "default_value": false
+                }
+            ]
+        }
+    ]
+}

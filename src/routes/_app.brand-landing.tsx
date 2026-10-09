@@ -24,7 +24,6 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import BrandLandingPage from '@/components/brand-landing-page';
 import { SeoMeta } from '@/components/seo-meta';
 import { buildCanonicalUrl } from '@/utils/canonical-url';
 import { PageType } from '@/lib/decorators/page-type';
@@ -98,7 +97,16 @@ export async function loader(args: Route.LoaderArgs): Promise<BrandLandingPageDa
 
     let page = null;
     // Try multiple possible page IDs
-    const possiblePageIds = ['brand-landing', 'brand-landing-page', 'brand-page', 'brand_landing'];
+    const possiblePageIds = [
+        'brand-landing',
+        'brand-landing-page',
+        'brand-page',
+        'brand_landing',
+        'brandlanding',
+        'brand_landing_page',
+        'branding-page',
+        'branding',
+    ];
 
     for (const pageId of possiblePageIds) {
         try {
@@ -142,36 +150,86 @@ function StaticFallbackContent({ t }: { t: TFunction<'brandLanding'> }) {
             </div>
 
             {/* Hero Section Fallback */}
-            <div className="relative h-[500px] bg-muted flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-4xl font-bold text-foreground mb-4">
+            <div className="relative h-[500px] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                <div className="text-center px-4">
+                    <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
                         {t('hero.title', { defaultValue: 'Welcome to Our Brand' })}
                     </h1>
-                    <p className="text-lg text-muted-foreground">
+                    <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
                         {t('hero.subtitle', { defaultValue: 'Discover our story and products' })}
                     </p>
+                    <div className="mt-8">
+                        <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors">
+                            {t('hero.cta', { defaultValue: 'Explore Products' })}
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Brand Story Fallback */}
             <div className="section-container">
-                <h2 className="text-2xl font-semibold text-foreground mb-6">
+                <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-6">
                     {t('brandStory.title', { defaultValue: 'Our Story' })}
                 </h2>
-                <p className="text-muted-foreground leading-relaxed max-w-3xl">
-                    {t('brandStory.content', { defaultValue: 'Learn about our brand journey and commitment to quality.' })}
-                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div className="bg-muted/50 border border-border rounded-lg p-8 h-64 flex items-center justify-center">
+                        <span className="text-muted-foreground">Brand Image</span>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground leading-relaxed mb-4">
+                            {t('brandStory.content', { defaultValue: 'Learn about our brand journey and commitment to quality.' })}
+                        </p>
+                        <p className="text-muted-foreground leading-relaxed">
+                            {t('brandStory.content2', { defaultValue: 'We believe in creating products that make a difference. Our journey started with a simple idea and has grown into a brand that customers trust.' })}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Personalized Message Fallback */}
+            <div className="section-container">
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-6">
+                    <p className="text-foreground font-medium">
+                        {t('personalizedMessage.text', { defaultValue: 'Welcome! We are excited to have you here. Explore our exclusive collection.' })}
+                    </p>
+                </div>
             </div>
 
             {/* Featured Products Fallback */}
             <div className="section-container">
-                <h2 className="text-2xl font-semibold text-foreground mb-6">
+                <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-6">
                     {t('featuredProducts.title', { defaultValue: 'Featured Products' })}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-muted/50 border border-border rounded-lg p-4 h-64 flex items-center justify-center">
-                            <span className="text-muted-foreground">Product {i}</span>
+                        <div key={i} className="bg-muted/50 border border-border rounded-lg p-4 h-80 flex flex-col items-center justify-center gap-4">
+                            <div className="w-full h-40 bg-muted rounded-md flex items-center justify-center">
+                                <span className="text-muted-foreground">Product Image</span>
+                            </div>
+                            <div className="text-center">
+                                <h3 className="font-medium text-foreground">Product {i}</h3>
+                                <p className="text-sm text-muted-foreground mt-1">Description</p>
+                                <p className="text-lg font-semibold text-foreground mt-2">$99.99</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Additional Content Fallback */}
+            <div className="section-container">
+                <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-6">
+                    {t('additionalContent.title', { defaultValue: 'Why Choose Us' })}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {[
+                        { title: 'Quality', desc: 'Premium materials and craftsmanship' },
+                        { title: 'Sustainability', desc: 'Eco-friendly production methods' },
+                        { title: 'Customer Service', desc: '24/7 support and satisfaction guarantee' },
+                    ].map((item, i) => (
+                        <div key={i} className="bg-muted/50 border border-border rounded-lg p-6">
+                            <h3 className="font-semibold text-foreground mb-2">{item.title}</h3>
+                            <p className="text-muted-foreground">{item.desc}</p>
                         </div>
                     ))}
                 </div>

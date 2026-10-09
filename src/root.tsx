@@ -375,7 +375,7 @@ export function Layout({ children }: PropsWithChildren) {
                 />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <Meta />
-                <Links />
+                <Links suppressHydrationWarning />
             </head>
             <body className="antialiased flex flex-col min-h-screen">
                 {children}
