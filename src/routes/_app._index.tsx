@@ -29,7 +29,6 @@ import { SeoMeta } from '@/components/seo-meta';
 import { buildCanonicalUrl } from '@/utils/canonical-url';
 import { useTranslation } from 'react-i18next';
 
-type HeadersArgs = Pick<Route.HeadersArgs, 'headers'>;
 
 export { shouldRevalidate } from '@/lib/revalidation/routes/home';
 
@@ -104,13 +103,11 @@ export async function loader(args: Route.LoaderArgs): Promise<HomePageData> {
     };
 }
 
-export function headers(): HeadersArgs {
+export function headers(): HeadersInit {
     return {
-        headers: {
-            // Disable caching for home page to ensure Page Designer changes appear immediately
-            'Cache-Control': 'no-store, no-cache, must-revalidate',
-            Pragma: 'no-cache',
-        },
+        // Disable caching for home page to ensure Page Designer changes appear immediately
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        Pragma: 'no-cache',
     };
 }
 
